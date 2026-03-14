@@ -22,20 +22,20 @@ Two AI agents — **The Optimizer** and **The Skeptic** — review your code ind
 
 ```mermaid
 flowchart TD
-    Start(["/adversarial-review:code-review"]) --> Context["Step 1: Get Context\ngit diff, branch, PR detection"]
+    Start(["/adversarial-review:code-review"]) --> Context["Step 1: Get Context<br/>git diff, branch, PR detection"]
     Context --> PR{PR exists?}
-    PR -->|Yes| Feedback["Step 2: Pull GitHub Feedback\nCodeRabbit · Copilot · Human reviews"]
+    PR -->|Yes| Feedback["Step 2: Pull GitHub Feedback<br/>CodeRabbit · Copilot · Human reviews"]
     PR -->|No| Docs
-    Feedback --> Triage["Step 3: Triage Feedback\nFix now · Create issue · Dismiss"]
-    Triage --> Docs["Step 4: Read Convention Docs\n.claude/docs/code-review.md\n.claude/docs/architecture.md"]
+    Feedback --> Triage["Step 3: Triage Feedback<br/>Fix now · Create issue · Dismiss"]
+    Triage --> Docs["Step 4: Read Convention Docs<br/>.claude/docs/code-review.md<br/>.claude/docs/architecture.md"]
 
     Docs --> Optimizer
 
     subgraph Pass1["Pass 1 — The Optimizer"]
         Optimizer["Find every issue worth fixing"]
-        OptSonnet["Sonnet agent\n(worktree)"]
-        OptOpus["Opus agent\n(worktree)"]
-        MergeOpt["Merge & deduplicate\nfindings"]
+        OptSonnet["Sonnet agent<br/>(worktree)"]
+        OptOpus["Opus agent<br/>(worktree)"]
+        MergeOpt["Merge & deduplicate<br/>findings"]
         Optimizer --> OptSonnet & OptOpus
         OptSonnet & OptOpus --> MergeOpt
     end
@@ -43,9 +43,9 @@ flowchart TD
     MergeOpt --> Skeptic
 
     subgraph Pass2["Pass 2 — The Skeptic"]
-        Skeptic["Challenge findings +\ncatch missed issues"]
-        SkpSonnet["Sonnet agent\n(worktree)"]
-        SkpOpus["Opus agent\n(worktree)"]
+        Skeptic["Challenge findings +<br/>catch missed issues"]
+        SkpSonnet["Sonnet agent<br/>(worktree)"]
+        SkpOpus["Opus agent<br/>(worktree)"]
         MergeSkp["Merge challenges"]
         Skeptic --> SkpSonnet & SkpOpus
         SkpSonnet & SkpOpus --> MergeSkp
@@ -54,16 +54,16 @@ flowchart TD
     MergeSkp --> Confidence
 
     subgraph Synthesis["Step 6 — Synthesize"]
-        Confidence{"Cross-model\nconsensus?"}
-        AutoFix["Auto-fix\nCritical/Major"]
-        Dispute["Present dispute\nto author"]
-        Note["Note for author\n(Minor/Nit)"]
+        Confidence{"Cross-model<br/>consensus?"}
+        AutoFix["Auto-fix<br/>Critical/Major"]
+        Dispute["Present dispute<br/>to author"]
+        Note["Note for author<br/>(Minor/Nit)"]
         Confidence -->|"Both models agree"| AutoFix
         Confidence -->|"Models disagree"| Dispute
         Confidence -->|"Low confidence"| Note
     end
 
-    AutoFix & Dispute & Note --> Report["Step 7: Structured Report\nFindings · Disputes · Recommendation"]
+    AutoFix & Dispute & Note --> Report["Step 7: Structured Report<br/>Findings · Disputes · Recommendation"]
     Report --> Done([Author reviews & approves])
 ```
 
