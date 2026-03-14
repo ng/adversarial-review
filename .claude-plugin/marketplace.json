@@ -1,0 +1,12 @@
+{
+  "plugins": [
+    {
+      "name": "adversarial-review",
+      "description": "Adversarial multi-model code review with dual Optimizer/Skeptic agents across Sonnet and Opus. Finds issues, challenges its own findings, and only auto-fixes what survives cross-model consensus.",
+      "source": {
+        "source": "github",
+        "repo": "ng/adversarial-review"
+      }
+    }
+  ]
+}
