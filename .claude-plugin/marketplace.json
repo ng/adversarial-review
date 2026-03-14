@@ -1,12 +1,23 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "adversarial-review",
+  "description": "Adversarial multi-model code review with progressive cost-gating",
+  "owner": {
+    "name": "ng"
+  },
   "plugins": [
     {
       "name": "adversarial-review",
       "description": "Adversarial multi-model code review with dual Optimizer/Skeptic agents across Sonnet and Opus. Finds issues, challenges its own findings, and only auto-fixes what survives cross-model consensus.",
-      "source": {
-        "source": "github",
-        "repo": "ng/adversarial-review"
-      }
+      "version": "1.0.0",
+      "author": {
+        "name": "ng"
+      },
+      "source": "./",
+      "category": "development",
+      "repository": "https://github.com/ng/adversarial-review",
+      "license": "MIT",
+      "keywords": ["code-review", "adversarial", "multi-model", "security", "quality"]
     }
   ]
 }
