@@ -21,12 +21,19 @@ jobs:
       - name: Check required fields in plugin.json
         run: |
           python3 -c "
-          import json, sys
+          import json, sys, pathlib
           p = json.load(open('.claude-plugin/plugin.json'))
           for field in ['name', 'version', 'description', 'skills']:
               if field not in p:
                   print(f'Missing required field: {field}')
                   sys.exit(1)
+          if not isinstance(p['skills'], str) or not p['skills'].strip():
+              print('Invalid skills field: must be a non-empty string path')
+              sys.exit(1)
+          skills_dir = pathlib.Path(p['skills'])
+          if not skills_dir.is_dir():
+              print(f'Skills directory not found: {skills_dir}')
+              sys.exit(1)
           print('All required fields present')
           "
 
