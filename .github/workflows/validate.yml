@@ -1,0 +1,46 @@
+name: Validate Plugin
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate plugin.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+
+      - name: Validate marketplace.json
+        run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+      - name: Check required fields in plugin.json
+        run: |
+          python3 -c "
+          import json, sys
+          p = json.load(open('.claude-plugin/plugin.json'))
+          for field in ['name', 'version', 'description']:
+              if field not in p:
+                  print(f'Missing required field: {field}')
+                  sys.exit(1)
+          print('All required fields present')
+          "
+
+      - name: Check SKILL.md exists with frontmatter
+        run: |
+          for skill_dir in skills/*/; do
+            skill_file="${skill_dir}SKILL.md"
+            if [ ! -f "$skill_file" ]; then
+              echo "Missing SKILL.md in $skill_dir"
+              exit 1
+            fi
+            if ! head -1 "$skill_file" | grep -q '^---'; then
+              echo "Missing frontmatter in $skill_file"
+              exit 1
+            fi
+            echo "Valid: $skill_file"
+          done
