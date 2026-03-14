@@ -23,7 +23,7 @@ jobs:
           python3 -c "
           import json, sys
           p = json.load(open('.claude-plugin/plugin.json'))
-          for field in ['name', 'version', 'description']:
+          for field in ['name', 'version', 'description', 'skills']:
               if field not in p:
                   print(f'Missing required field: {field}')
                   sys.exit(1)
