@@ -92,7 +92,19 @@ flowchart TD
         Confidence -->|"Low confidence"| Note
     end
 
-    AutoFix & Dispute & Note --> PR["Post inline<br/>PR comments"]
+    AutoFix & Dispute & Note --> Haiku
+
+    subgraph HaikuPass["Haiku Scoring Pass"]
+        Haiku["Parallel Haiku agents<br/>score each finding 0-100"]
+        Filter{"Score check"}
+        Keep["Keep finding"]
+        Downgrade["Move to lower-confidence<br/>section"]
+        Haiku --> Filter
+        Filter -->|"≥ 50"| Keep
+        Filter -->|"< 50"| Downgrade
+    end
+
+    Keep & Downgrade --> PR["Post inline<br/>PR/MR comments"]
     PR --> Artifacts
 
     subgraph Artifacts["Review artifacts"]
