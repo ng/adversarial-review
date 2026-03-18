@@ -1,7 +1,7 @@
 {
   "name": "adversarial-review",
   "description": "Adversarial multi-model code review. Dual Optimizer/Skeptic agents (Sonnet + Opus) challenge each other's findings. Pulls GitHub PR feedback, reviews against project conventions, auto-fixes consensus issues, presents disputes for author decision.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "ng"
   },
