@@ -92,7 +92,19 @@ flowchart TD
         Confidence -->|"Low confidence"| Note
     end
 
-    AutoFix & Dispute & Note --> PR["Post inline<br/>PR comments"]
+    AutoFix & Dispute & Note --> Haiku
+
+    subgraph HaikuPass["Haiku Scoring Pass"]
+        Haiku["Parallel Haiku agents<br/>score each finding 0-100"]
+        Filter{"Score check"}
+        Keep["Keep finding"]
+        Downgrade["Move to lower-confidence<br/>section"]
+        Haiku --> Filter
+        Filter -->|"≥ 50"| Keep
+        Filter -->|"< 50"| Downgrade
+    end
+
+    Keep & Downgrade --> PR["Post inline<br/>PR/MR comments"]
     PR --> Artifacts
 
     subgraph Artifacts["Review artifacts"]
@@ -168,7 +180,7 @@ This plugin's architecture is informed by research on LLM code review:
 
 ## Changelog
 
-### 0.2.0 — 2026-03-17
+### 1.1.0 — 2026-03-17
 
 Improvements informed by head-to-head comparison with Anthropic's official code-review plugin.
 
@@ -180,7 +192,7 @@ Improvements informed by head-to-head comparison with Anthropic's official code-
 - **GitLab support**: Platform auto-detection via `git remote -v`, with GitLab API support for MR metadata, inline discussions, issue filing, and pipeline status (via `$GITLAB_PAT` / `$GITLAB_ORG_PAT`)
 - **Opt-in issue filing**: Issue creation is now prompted at the start of the review rather than at the end, giving the user control before the pipeline runs
 
-### 0.1.0 — 2026-03-14
+### 1.0.0 — 2026-03-14
 
 Initial release.
 
