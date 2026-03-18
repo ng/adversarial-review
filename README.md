@@ -8,8 +8,13 @@ Mechanical checks first (free), then AI agents scaled to change complexity. Two 
 
 ```
 /plugin marketplace add ng/adversarial-review
+```
+
+```
 /plugin install adversarial-review
 ```
+
+To update to the latest version, re-run both commands.
 
 ## Usage
 
@@ -28,7 +33,7 @@ Mechanical checks first (free), then AI agents scaled to change complexity. Two 
 flowchart TD
     Start(["/adversarial-review:run"]) --> Context["1. Get Context"]
     Context --> PR{PR exists?}
-    PR -->|Yes| Feedback["2. Pull GitHub Feedback"]
+    PR -->|Yes| Feedback["2. Pull PR/MR Feedback"]
     PR -->|No| Docs
     Feedback --> Triage["3. Triage Feedback"]
     Triage --> Docs["4. Read Convention Docs<br/>REVIEW.md · .claude/docs/"]
@@ -45,8 +50,8 @@ flowchart TD
     Verify -->|"Checks pass"| Report
     Verify -->|"Checks fail,<br/>iteration < 2"| Fix["Fix regressions"] --> Verify
     Verify -->|"Still failing<br/>after 2 rounds"| Report
-    Report["8. Structured Report<br/>+ PR comments"] --> Issues{"File issues for<br/>deferred/disputed?"}
-    Issues -->|Yes| File["9. File GitHub Issues<br/>with full review context"]
+    Report["8. Structured Report<br/>+ PR/MR comments"] --> Issues{"File issues?<br/>(opted in at start)"}
+    Issues -->|Yes| File["9. File Issues<br/>with full review context"]
     Issues -->|No| Done
     File --> Done([Author reviews & approves])
 ```
@@ -100,16 +105,16 @@ flowchart TD
 
 ### Steps
 
-0. **Parse arguments** — PR number, `--fix` flag (default: review only)
-1. **Get context** — branch, diff, PR detection
-2. **Pull GitHub feedback** — CodeRabbit, Copilot, human review comments
-3. **Triage feedback** — fix now, create issue, or dismiss
+0. **Parse arguments** — PR number, `--fix` flag, issue filing opt-in prompt
+1. **Get context** — branch, diff, platform detection (GitHub/GitLab)
+2. **Pull PR/MR feedback** — CodeRabbit, Copilot, human review comments
+3. **Triage feedback** — fix now, create issue (if opted in), or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
 6. **Adversarial review** — cost-gated: standard (2 agents) or full (4 agents) based on change risk
-7. **Synthesize** — in auto-fix mode: apply consensus fixes + bounded verification loop (max 2 iterations). In review-only mode: report findings as suggestions.
-8. **Structured report** — findings posted as inline PR comments + persistent `summary.md` artifact
-9. **File issues** — deferred, disputed, and pre-existing items filed as GitHub issues with full review context
+7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
+8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
+9. **File issues** — if opted in: deferred, disputed, and pre-existing items filed with full review context
 
 ## Severity levels
 
@@ -139,7 +144,7 @@ Without any of these, universal lenses apply (security, performance, correctness
 
 ## Issue filing
 
-After the review, the plugin offers to file GitHub issues for deferred, disputed, and pre-existing items. Each issue includes the full review context: problem description, Optimizer reasoning, Skeptic challenge, suggested fix, and source PR reference. This preserves the debate so the team can pick up where the review left off without re-discovering the same issues.
+Issue filing is **opt-in** — the plugin asks at the start whether you want issues created for out-of-scope, pre-existing, or deferred findings. If enabled, each issue includes the full review context: problem description, Optimizer reasoning, Skeptic challenge (with confidence score), suggested fix, and source PR/MR reference. Supports both GitHub (`gh`) and GitLab (API via `$GITLAB_PAT`).
 
 ## Design rationale
 
@@ -160,6 +165,34 @@ This plugin's architecture is informed by research on LLM code review:
 - Deception detection relies on the LLM's ability to reason about naming vs behavior, which is itself susceptible to sophisticated adversarial patterns (Bernstein et al.).
 - Cost gating heuristics (20+ files, label-based triggers) are coarse. Some high-risk changes in small diffs may get standard depth when they warrant full depth.
 - Human review remains essential for high-risk changes.
+
+## Changelog
+
+### 0.2.0 — 2026-03-17
+
+Improvements informed by head-to-head comparison with Anthropic's official code-review plugin.
+
+- **Specialized Optimizer lenses**: Added git history, code comment compliance, and prior review pattern lenses to catch regressions against intentional guards, stale comments, and reintroduced issues
+- **Skeptic confidence scoring**: Each Skeptic verdict now includes a 0-100 confidence score (0=guess, 50=reasoning only, 75=tool-validated, 100=mechanically confirmed) with filtering rules that downgrade low-confidence agreements and preserve weak disagreements
+- **Haiku scoring pass**: Optional post-synthesis pass launches parallel Haiku agents per finding to independently score confidence without adversarial context, catching groupthink false positives
+- **Lower confidence report section**: Findings where only one model flagged it, Skeptic confidence was 50-74, or Haiku score was marginal are surfaced as "worth a second look" rather than dropped
+- **Independent Skeptic assessment**: Skeptic now reads the diff and forms impressions before seeing Optimizer findings, strengthening its ability to catch false positives and find missed issues
+- **GitLab support**: Platform auto-detection via `git remote -v`, with GitLab API support for MR metadata, inline discussions, issue filing, and pipeline status (via `$GITLAB_PAT` / `$GITLAB_ORG_PAT`)
+- **Opt-in issue filing**: Issue creation is now prompted at the start of the review rather than at the end, giving the user control before the pipeline runs
+
+### 0.1.0 — 2026-03-14
+
+Initial release.
+
+- Adversarial multi-model code review with Optimizer/Skeptic pipeline
+- Progressive cost-gating: skip (docs only), standard (2 agents), full (4 agents)
+- Mechanical checks (lint, typecheck, build, tests) before LLM spend
+- Auto-fix mode with bounded verification loop (max 2 iterations)
+- Cross-model consensus signals (Sonnet + Opus)
+- GitHub PR feedback integration (CodeRabbit, Copilot, human comments)
+- Deception detection lens for misleading names/comments
+- Inline PR comment posting and persistent `summary.md` artifact
+- Issue filing for deferred, disputed, and pre-existing items
 
 ## License
 

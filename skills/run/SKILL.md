@@ -49,12 +49,26 @@ If no PR number is provided, auto-detect via `gh pr view --json number`.
 | `review-only` (default) | Report findings as suggestions. No code is modified. |
 | `auto-fix` (`--fix`) | Apply consensus Critical/Major fixes + bounded verification loop (max 2 iterations). |
 
+**Prompt for issue creation preference before proceeding:**
+
+> "Should I file issues for out-of-scope, pre-existing, or deferred findings discovered during the review? (y/n)"
+
+Store the answer as `[file-issues]` (`yes` or `no`). This controls whether Steps 3 and 9 create issues or just note them in the report.
+
 ## Step 1: Get Context
 
 Run in parallel:
 1. `git branch --show-current` → store as `[branch]`
-2. `git remote -v` → extract `[owner]/[repo]`
-3. Detect base branch: try `gh pr view --json baseRefName -q .baseRefName 2>/dev/null`, else check if `origin/develop` exists (`git rev-parse --verify origin/develop 2>/dev/null`) — use `develop` if it exists, otherwise `main`. Store as `[base]`.
+2. `git remote -v` → extract `[owner]/[repo]` and detect `[platform]`:
+   - If remote URL contains `github.com` → `[platform]` = `github`
+   - If remote URL contains `gitlab` or is not `github.com` → `[platform]` = `gitlab`
+   - For GitLab, extract `[gitlab_url]` (e.g., `https://gitlab.example.com`) and resolve project ID:
+     `curl --header "PRIVATE-TOKEN: $GITLAB_PAT" "$GITLAB_URL/api/v4/projects?search=[repo]"` → store as `[project_id]`
+   - Token lookup order: `$GITLAB_PAT` → `$GITLAB_ORG_PAT` → error with instructions
+3. Detect base branch:
+   - GitHub: try `gh pr view --json baseRefName -q .baseRefName 2>/dev/null`
+   - GitLab: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests?source_branch=[branch]&state=opened" | jq -r '.[0].target_branch'`
+   - Fallback: check if `origin/develop` exists (`git rev-parse --verify origin/develop 2>/dev/null`) — use `develop` if it exists, otherwise `main`. Store as `[base]`.
 
 Then:
 4. `git fetch origin [base]`
@@ -62,25 +76,35 @@ Then:
 6. `git diff origin/[base]...HEAD --stat`
 7. `git diff origin/[base]...HEAD`
 
-## Step 2: Pull GitHub PR Feedback (if PR exists)
+## Step 2: Pull PR Feedback (if PR/MR exists)
 
-Try to detect or use the provided PR number. If a PR exists:
+Try to detect or use the provided PR number. If a PR/MR exists:
 
+**GitHub (`[platform]` = `github`):**
 1. Get PR metadata: `gh pr view <number> --json title,body,state,headRefName,baseRefName,labels`
 2. Get all review comments (Copilot, CodeRabbit, humans):
    - `gh api repos/[owner]/[repo]/pulls/<number>/comments` — inline review comments
    - `gh pr view <number> --json comments,reviews` — top-level comments and review summaries
 3. Check CI status: `gh pr checks <number>`
+
+**GitLab (`[platform]` = `gitlab`):**
+1. Get MR metadata: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]"`
+2. Get all MR notes (comments): `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/notes"`
+3. Get MR discussions (inline review threads): `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"`
+4. Check pipeline status: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/pipelines"`
+
+**Then (both platforms):**
 4. Parse and deduplicate feedback into actionable items with file, line, description
 5. Present a summary table of all feedback items
 
-If no PR exists, skip to Step 4.
+If no PR/MR exists, skip to Step 4.
 
-## Step 3: Address GitHub Feedback
+## Step 3: Address PR/MR Feedback
 
 For each feedback item, triage:
 - **Fix now**: If the issue is valid and in scope, fix it directly
-- **Create issue**: If valid but out of scope or pre-existing, create a GitHub issue
+- **Create issue** (only if `[file-issues]` = `yes`): If valid but out of scope or pre-existing, create an issue (GitHub: `gh issue create`, GitLab: `curl -X POST ... "$GITLAB_URL/api/v4/projects/[project_id]/issues"`)
+- **Note for report** (if `[file-issues]` = `no`): If valid but out of scope or pre-existing, note it in the report for manual follow-up
 - **Dismiss**: If the feedback is incorrect or not applicable, note why
 
 After addressing all items:
@@ -232,6 +256,17 @@ CONSTRAINT: Do NOT modify any source files. Write your findings to a report file
      accurately describe what the code actually does. Flag mismatches between naming and
      behavior — misleading names can cause reviewers (both human and AI) to overlook
      vulnerabilities hiding behind trustworthy-sounding abstractions.
+   - Git history: Run `git log --oneline -5 -- <file>` for key changed files. Check if a
+     pattern was deliberately established by previous commits that this PR removes or
+     contradicts. Flag regressions against intentional guards.
+   - Code comment compliance: Read JSDoc and inline comments in modified files. Verify
+     comments accurately describe the code's current behavior. Flag stale counts,
+     misleading toggle/switch descriptions, and TODO items that this PR should have
+     addressed.
+   - Prior review patterns: Check recent commits for messages containing "fix:", "address
+     review", or "review findings". If similar issues were fixed before in these files,
+     verify this PR doesn't reintroduce the same class of problem (e.g., hardcoded colors,
+     unmemoized callbacks, missing Orchestra wrappers).
 
    PLUS any domain-specific lenses from the project's `.claude/docs/code-review.md`.
 
@@ -329,11 +364,15 @@ Agent({
 YOUR ROLE: Challenge The Optimizer's findings. Find flaws in their suggestions. Catch what they missed.
 CONSTRAINT: Do NOT modify any source files. Write your challenge report only.
 
-1. Read The Optimizer's merged findings: .claude/reviews/[branch]/optimizer-merged.md
-2. Read ALL changed files: git diff origin/[base]...HEAD
+1. Read ALL changed files FIRST: git diff origin/[base]...HEAD
+2. Form your own initial impressions of the code quality — note potential issues
+   before seeing the Optimizer's report. This independent assessment strengthens
+   your ability to catch false positives and find missed issues.
 3. Read `REVIEW.md` (repo root, if it exists) for review-only guidance.
    Read `.claude/docs/code-review.md` (if it exists) for project context.
    Also read any other relevant `.claude/docs/` files.
+4. THEN read The Optimizer's merged findings: .claude/reviews/[branch]/optimizer-merged.md
+5. Challenge findings where your independent assessment disagrees with the Optimizer.
 
 For EACH of The Optimizer's findings, evaluate:
 - Is the issue real or a false positive?
@@ -363,7 +402,7 @@ Then, independently review the code for issues The Optimizer missed, especially:
 - Blast radius: could this change break existing behavior or downstream consumers?
 - Deception: do names/comments accurately describe behavior? (see Optimizer lens)
 
-4. Write your challenge report in this exact format:
+6. Write your challenge report in this exact format:
 
    # Skeptic Challenge Report ([model]) — [branch]
 
@@ -371,6 +410,8 @@ Then, independently review the code for issues The Optimizer missed, especially:
 
    ### RE: Finding [N] — [Optimizer's title]
    - **Verdict**: ✅ Agree | ⚠️ Disagree | 🔄 Agree with modifications
+   - **Confidence**: [0-100] (0=pure guess, 50=reasoning only — no tool validation,
+     75=validated with grep/blame/tests, 100=mechanically confirmed — test fails, lint errors, etc.)
    - **Challenge**: [why the suggestion is wrong, risky, or over-engineered — be specific]
    - **Alternative**: [better approach, if applicable]
    - **Risk if applied as-is**: [what could break]
@@ -392,7 +433,7 @@ Then, independently review the code for issues The Optimizer missed, especially:
    - Findings agreed with modifications: [count]
    - New issues found: [count]
 
-5. Do NOT commit, push, or modify source files. Report only.
+7. Do NOT commit, push, or modify source files. Report only.
 ```
 
 Wait for Skeptic agent(s) to complete. For **full depth**, merge:
@@ -417,16 +458,31 @@ Use model agreement to gauge confidence (full depth only — for standard depth,
 | Both Optimizer models flagged it + Skeptic models disagree | Disputed — present to user |
 | Only one model flagged + only one Skeptic agrees | Low confidence — note only |
 
+### Confidence-based filtering
+
+Before resolving findings, apply confidence filters to Skeptic verdicts:
+
+| Skeptic Verdict | Confidence | Treatment |
+|-----------------|------------|-----------|
+| ✅ Agree | 75-100 | Confirmed — high confidence |
+| ✅ Agree | 50-74 | Confirmed — lower confidence (see "Lower Confidence Items" in report) |
+| ✅ Agree | < 50 | Downgrade to "Low confidence — note only" |
+| ⚠️ Disagree | 75-100 | Strong disagreement — present as Disputed |
+| ⚠️ Disagree | < 50 | Weak disagreement — treat as "Disputed" rather than rejected |
+| 🔄 Modified | any | Apply modified suggestion at stated confidence |
+
 ### Resolve each finding
 
-For each Optimizer finding, cross-reference The Skeptic's verdict:
+For each Optimizer finding, cross-reference The Skeptic's verdict and confidence:
 
 **If `[mode]` is `review-only`:**
 
 | Skeptic Verdict | Action |
 |-----------------|--------|
-| ✅ Agree | Report as confirmed finding with suggested fix |
-| ⚠️ Disagree | Report the dispute with both sides |
+| ✅ Agree (confidence >= 50) | Report as confirmed finding with suggested fix |
+| ✅ Agree (confidence < 50) | Report as low-confidence note |
+| ⚠️ Disagree (confidence >= 50) | Report the dispute with both sides |
+| ⚠️ Disagree (confidence < 50) | Report as disputed (weak disagreement) — do not reject |
 | 🔄 Agree with modifications | Report with the modified suggestion |
 
 All findings are suggestions only. No code is modified.
@@ -435,7 +491,8 @@ All findings are suggestions only. No code is modified.
 
 | Skeptic Verdict | Action |
 |-----------------|--------|
-| ✅ Agree | Apply the fix (Critical/Major) or note it (Minor/Nit) |
+| ✅ Agree (confidence >= 50) | Apply the fix (Critical/Major) or note it (Minor/Nit) |
+| ✅ Agree (confidence < 50) | Note only — do NOT auto-fix low-confidence items |
 | ⚠️ Disagree | Present the dispute to the user — do NOT auto-fix |
 | 🔄 Agree with modifications | Apply the modified version (Critical/Major) or note it (Minor/Nit) |
 
@@ -478,40 +535,90 @@ After exiting the verify loop:
   remaining failures in the report
 - Do NOT push yet — present the report first
 
+### Haiku confidence scoring (optional final filter)
+
+After synthesis, launch parallel Haiku agents — one per confirmed finding — to independently
+score confidence 0-100. Each Haiku agent sees ONLY the single finding (problem + suggested fix +
+file context) without the adversarial debate context, preventing groupthink bias.
+
+```javascript
+// For each confirmed finding, launch in parallel:
+Agent({
+  name: "scorer-[N]",
+  subagent_type: "general-purpose",
+  mode: "bypassPermissions",
+  run_in_background: true,
+  model: "haiku",
+  prompt: `Score this code review finding 0-100 for confidence that it is a real issue.
+  Read the file [path] around line [line].
+  Finding: [title] — [problem description]
+  Suggested fix: [fix]
+  Score 0=false positive, 50=plausible but unvalidated, 75=likely real, 100=mechanically confirmed.
+  Reply with ONLY: {"score": N, "reason": "one sentence"}`
+})
+```
+
+Use Haiku scores as a final filter:
+- Haiku score < 30: Downgrade to "Low confidence — note only" regardless of Skeptic verdict
+- Haiku score 30-60 + Skeptic confidence < 50: Downgrade to "Lower Confidence Items"
+- Haiku score > 60: No change — trust the adversarial pipeline's verdict
+
+This catches the edge case where Optimizer and Skeptic both agree on something that's actually
+a false positive (groupthink), because Haiku sees each finding in isolation.
+
+**Skip this pass if total confirmed findings < 3** — the overhead isn't worth it for small reviews.
+
 ## Step 8: Structured Report
 
 Compile findings from all sources into:
 
-| Source | Severity | File | Finding | Skeptic Verdict | Status |
-|--------|----------|------|---------|-----------------|--------|
-| Mechanical | ... | ... | ... | — | Fixed / Reported |
-| GitHub | ...      | ...  | ...     | —               | Fixed / Skipped / Needs discussion |
-| Optimizer | ...   | ...  | ...     | Agree / Disagree / Modified | Fixed / Disputed / Deferred |
-| Skeptic (missed) | ... | ... | ...  | —               | Fixed / Deferred |
-| Pre-existing | 🟣 | ... | ... | — | Issue filed / Noted |
+| Source | Severity | File | Finding | Skeptic Verdict | Confidence | Status |
+|--------|----------|------|---------|-----------------|------------|--------|
+| Mechanical | ... | ... | ... | — | — | Fixed / Reported |
+| PR Feedback | ... | ... | ... | — | — | Fixed / Skipped / Needs discussion |
+| Optimizer | ... | ... | ... | Agree / Disagree / Modified | [0-100] | Fixed / Disputed / Deferred |
+| Skeptic (missed) | ... | ... | ... | — | [0-100] | Fixed / Deferred |
+| Pre-existing | 🟣 | ... | ... | — | — | Issue filed / Noted |
 
 Report sections:
 - **Summary**: What was added/modified/removed
 - **Review Depth**: Which tier was used (skip / standard / full) and why
 - **Mechanical Findings**: Issues caught by lint/typecheck/build/tests (free)
-- **GitHub Feedback** (if PR exists): Items addressed vs issues created vs dismissed
+- **PR Feedback** (if PR/MR exists): Items addressed vs issues created vs dismissed
 - **Consensus Fixes Applied**: Issues both agents agreed on that were auto-fixed (note which models flagged each)
 - **Disputed Items** (requires author decision): Issues where models disagreed — present both sides with a recommendation
+- **Lower Confidence Items**: Findings where only one model flagged it OR Skeptic confidence was 50-74 OR Haiku score was 30-60. Present as "worth a second look" rather than confirmed issues. These are NOT auto-fixed but are surfaced to the author for manual review.
 - **Pre-existing Issues**: Bugs found in surrounding code not introduced by this PR (🟣)
 - **Remaining Items**: 🟢 Minor and ⚪ Nit issues not auto-fixed (for author to decide)
 - **Verification Loop Results**: How many fix-verify iterations ran, what passed/failed
 - **Model Agreement Summary**: How many findings had full cross-model consensus vs split opinions
 - **Recommendation**: Approve, Request Changes, or Comment
 
-### Post findings as PR comments (if PR exists)
+### Post findings as PR/MR comments (if PR/MR exists)
 
-If a PR exists, post findings as inline comments on the specific lines where issues were found. Use the GitHub API to create review comments:
+If a PR/MR exists, post findings as inline comments on the specific lines where issues were found.
 
+**GitHub (`[platform]` = `github`):**
 ```bash
 gh api repos/[owner]/[repo]/pulls/[number]/reviews --method POST \
   --field event=COMMENT \
   --field body="[summary comment]" \
   --field 'comments[]={ "path": "[file]", "line": [line], "body": "[finding]" }'
+```
+
+**GitLab (`[platform]` = `gitlab`):**
+```bash
+# Post summary note on MR
+curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+  --header "Content-Type: application/json" \
+  -d '{"body":"[summary comment]"}' \
+  "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/notes"
+
+# Post inline discussion on specific lines
+curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+  --header "Content-Type: application/json" \
+  -d '{"body":"[finding]","position":{"base_sha":"[base_sha]","start_sha":"[start_sha]","head_sha":"[head_sha]","position_type":"text","new_path":"[file]","new_line":[line]}}' \
+  "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"
 ```
 
 For each finding, format the comment as:
@@ -553,6 +660,10 @@ Branch: [branch] → [base]
 ### Disputed ([count])
 [findings where agents disagreed, with both sides and author's decision if made]
 
+### Lower Confidence ([count])
+[findings where only one model flagged it, Skeptic confidence was 50-74, or Haiku score
+was 30-60 — worth a second look but not confirmed issues]
+
 ### Deferred ([count])
 [findings not addressed in this PR, with issue numbers if filed]
 
@@ -568,19 +679,39 @@ Branch: [branch] → [base]
 
 ## Step 9: File Issues for Deferred and Disputed Items
 
-After presenting the report, ask the user:
+**Skip this step entirely if `[file-issues]` = `no`.** Note deferred/disputed items in the report only.
 
-> "Would you like me to file GitHub issues for deferred, disputed, or pre-existing items?
-> This preserves the full review context so the team can pick up where we left off."
+If `[file-issues]` = `yes`, create an issue for each deferred, disputed, or pre-existing item:
 
-If yes, for each item the user approves, create a GitHub issue with full context:
-
+**GitHub (`[platform]` = `github`):**
 ```bash
 gh issue create \
   --title "[severity emoji] [finding title]" \
   --label "code-review" \
   --label "[severity: critical|major|minor]" \
   --body "$(cat <<'ISSUE'
+[ISSUE_BODY — see below]
+ISSUE
+)"
+```
+
+**GitLab (`[platform]` = `gitlab`):**
+```bash
+curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+  --header "Content-Type: application/json" \
+  -d "$(cat <<'ISSUE'
+{
+  "title": "[severity emoji] [finding title]",
+  "labels": "code-review,[severity: critical|major|minor]",
+  "description": "[ISSUE_BODY — see below]"
+}
+ISSUE
+)" \
+  "$GITLAB_URL/api/v4/projects/[project_id]/issues"
+```
+
+**ISSUE_BODY** (shared by both platforms):
+```markdown
 ## Problem
 
 [problem description]
@@ -594,6 +725,7 @@ gh issue create \
 [Optimizer's reasoning for flagging this]
 
 [Skeptic's challenge or agreement, if applicable]
+**Skeptic confidence**: [0-100]
 
 ## Suggested fix
 
@@ -601,15 +733,13 @@ gh issue create \
 
 ## Source
 
-- Review of PR #[number] (`[branch]` → `[base]`)
+- Review of PR/MR #[number] (`[branch]` → `[base]`)
 - Review date: [YYYY-MM-DD]
 - Review depth: [standard | full]
 - [Link to review summary if available]
 
 ---
 *Filed by [adversarial-review](https://github.com/ng/adversarial-review) plugin*
-ISSUE
-)"
 ```
 
 For disputed items, include BOTH the Optimizer's argument and the Skeptic's challenge in the issue body so future readers have the full debate context.
@@ -626,4 +756,6 @@ After the user reviews all items:
 1. Apply any additional fixes the user approves
 2. Re-run mechanical checks
 3. Commit and push
-4. If PR exists, re-request reviews: `gh api repos/[owner]/[repo]/pulls/<number>/requested_reviewers -f "reviewers[]=copilot-pull-request-reviewer[bot]"`
+4. If PR/MR exists, re-request reviews:
+   - GitHub: `gh api repos/[owner]/[repo]/pulls/<number>/requested_reviewers -f "reviewers[]=copilot-pull-request-reviewer[bot]"`
+   - GitLab: No automated re-request — note in report that MR is ready for re-review
