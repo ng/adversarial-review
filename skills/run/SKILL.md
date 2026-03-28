@@ -183,7 +183,7 @@ TeamCreate({
 })
 ```
 
-Ensure the shared report directory exists: `mkdir -p [repo_root]/.claude/reviews/[branch]`
+Ensure the shared report directory exists: `mkdir -p [repo_root]/.claude/reviews/[branch_safe]`
 
 ### Create tasks with dependencies
 
@@ -739,7 +739,7 @@ For each finding, format the comment as:
 
 ### Save persistent review summary
 
-Write a self-contained summary to `.claude/reviews/[branch_safe]/summary.md` that captures the full review outcome. This file is the **review artifact of record** — it survives after agent reports are cleaned up and contains everything needed to understand what was reviewed, decided, and deferred.
+Write a self-contained summary to `[repo_root]/.claude/reviews/[branch_safe]/summary.md` that captures the full review outcome. This file is the **review artifact of record** — it survives after agent reports are cleaned up and contains everything needed to understand what was reviewed, decided, and deferred.
 
 ```markdown
 # Code Review Summary — [branch] (PR #[number])

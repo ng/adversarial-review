@@ -60,22 +60,24 @@ flowchart TD
 
 ```mermaid
 flowchart TD
+    Team["TeamCreate +<br/>TaskCreate with dependencies"] --> Pass1
+
     subgraph Pass1["Pass 1 — The Optimizer"]
         Optimizer["Find every issue worth fixing"]
-        OptSonnet["Sonnet agent<br/>(worktree)"]
-        OptOpus["Opus agent<br/>(worktree, full depth only)"]
-        MergeOpt["Merge & deduplicate"]
+        OptSonnet["Sonnet teammate<br/>(worktree)"]
+        OptOpus["Opus teammate<br/>(worktree, full depth only)"]
+        MergeOpt["Lead merges &<br/>deduplicates"]
         Optimizer --> OptSonnet & OptOpus
         OptSonnet & OptOpus --> MergeOpt
     end
 
-    MergeOpt --> Skeptic
+    MergeOpt -->|"SendMessage<br/>wake Skeptics"| Skeptic
 
     subgraph Pass2["Pass 2 — The Skeptic"]
         Skeptic["Challenge findings +<br/>catch missed issues"]
-        SkpSonnet["Sonnet agent<br/>(worktree)"]
-        SkpOpus["Opus agent<br/>(worktree, full depth only)"]
-        MergeSkp["Merge challenges"]
+        SkpSonnet["Sonnet teammate<br/>(worktree)"]
+        SkpOpus["Opus teammate<br/>(worktree, full depth only)"]
+        MergeSkp["Lead merges<br/>challenges"]
         Skeptic --> SkpSonnet & SkpOpus
         SkpSonnet & SkpOpus --> MergeSkp
     end
@@ -104,14 +106,16 @@ flowchart TD
         Filter -->|"< 50"| Downgrade
     end
 
-    Keep & Downgrade --> PR["Post inline<br/>PR/MR comments"]
+    Keep & Downgrade --> ShutdownReq["SendMessage<br/>shutdown_request"]
+    ShutdownReq --> Shutdown["TeamDelete"]
+    Shutdown --> PR["Post inline<br/>PR/MR comments"]
     PR --> Artifacts
 
     subgraph Artifacts["Review artifacts"]
         direction LR
-        A1[".claude/reviews/&lt;branch&gt;/<br/>optimizer-*.md"]
-        A2[".claude/reviews/&lt;branch&gt;/<br/>skeptic-*.md"]
-        A3[".claude/reviews/&lt;branch&gt;/<br/>summary.md"]
+        A1[".claude/reviews/&lt;branch_safe&gt;/<br/>optimizer-*.md"]
+        A2[".claude/reviews/&lt;branch_safe&gt;/<br/>skeptic-*.md"]
+        A3[".claude/reviews/&lt;branch_safe&gt;/<br/>summary.md"]
     end
 ```
 
@@ -123,7 +127,7 @@ flowchart TD
 3. **Triage feedback** — fix now, create issue (if opted in), or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
-6. **Adversarial review** — cost-gated: standard (2 agents) or full (4 agents) based on change risk
+6. **Adversarial review** — cost-gated: standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies
 7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
 8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
 9. **File issues** — if opted in: deferred, disputed, and pre-existing items filed with full review context
@@ -140,7 +144,7 @@ flowchart TD
 
 ## Review artifacts
 
-Agent reports are saved to `.claude/reviews/<branch>/` in the project. The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. Add `.claude/reviews/` to `.gitignore` (or commit `summary.md` files separately if you want review history).
+Agent reports are saved to `.claude/reviews/<branch_safe>/` in the project (branch names are sanitized — `feat/foo` becomes `feat-foo`). The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. Add `.claude/reviews/` to `.gitignore` (or commit `summary.md` files separately if you want review history).
 
 ## Customizing reviews
 
@@ -179,6 +183,16 @@ This plugin's architecture is informed by research on LLM code review:
 - Human review remains essential for high-risk changes.
 
 ## Changelog
+
+### 1.2.0 — 2026-03-28
+
+Restructured adversarial review pipeline from background agents to agent teams.
+
+- **Agent team orchestration**: Optimizer and Skeptic agents are now coordinated as teammates via `TeamCreate`, `TaskCreate` with explicit dependencies, and `SendMessage` for wake-up signals — replacing ad-hoc background agent spawning
+- **Task dependency model**: Sequential pipeline constraints (Skeptic blocked until Optimizer merge completes) are now declarative via `addBlockedBy` rather than implicit wait-and-spawn
+- **Absolute report paths**: Agent reports use `[repo_root]` absolute paths so worktree-isolated teammates write to the shared review directory
+- **Branch name sanitization**: `[branch_safe]` (slashes replaced with dashes) used in team names and directory paths to handle `feat/`, `fix/` branch conventions
+- **Teams API semantics documented**: Spawn section documents sequential task IDs, idle notifications, `shutdown_request` protocol, and `TeamDelete` behavior
 
 ### 1.1.0 — 2026-03-17
 
