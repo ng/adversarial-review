@@ -190,7 +190,7 @@ Restructured adversarial review pipeline from background agents to agent teams.
 
 - **Agent team orchestration**: Optimizer and Skeptic agents are now coordinated as teammates via `TeamCreate`, `TaskCreate` with explicit dependencies, and `SendMessage` for wake-up signals — replacing ad-hoc background agent spawning
 - **Task dependency model**: Sequential pipeline constraints (Skeptic blocked until Optimizer merge completes) are now declarative via `addBlockedBy` rather than implicit wait-and-spawn
-- **Absolute report paths**: Agent reports use `[repo_root]` absolute paths so worktree-isolated teammates write to the shared review directory
+- **No worktree isolation**: Teammates run in the main repo (not worktrees) so they can write reports to `.claude/reviews/` without permission prompts. Containment enforced by prompt constraints ("report only, do not modify source files")
 - **Branch name sanitization**: `[branch_safe]` (slashes replaced with dashes) used in team names and directory paths to handle `feat/`, `fix/` branch conventions
 - **Teams API semantics documented**: Spawn section documents sequential task IDs, idle notifications, `shutdown_request` protocol, and `TeamDelete` behavior
 
