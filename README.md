@@ -64,8 +64,8 @@ flowchart TD
 
     subgraph Pass1["Pass 1 — The Optimizer"]
         Optimizer["Find every issue worth fixing"]
-        OptSonnet["Sonnet teammate<br/>(worktree)"]
-        OptOpus["Opus teammate<br/>(worktree, full depth only)"]
+        OptSonnet["Sonnet teammate"]
+        OptOpus["Opus teammate<br/>(full depth only)"]
         MergeOpt["Lead merges &<br/>deduplicates"]
         Optimizer --> OptSonnet & OptOpus
         OptSonnet & OptOpus --> MergeOpt
@@ -75,8 +75,8 @@ flowchart TD
 
     subgraph Pass2["Pass 2 — The Skeptic"]
         Skeptic["Challenge findings +<br/>catch missed issues"]
-        SkpSonnet["Sonnet teammate<br/>(worktree)"]
-        SkpOpus["Opus teammate<br/>(worktree, full depth only)"]
+        SkpSonnet["Sonnet teammate"]
+        SkpOpus["Opus teammate<br/>(full depth only)"]
         MergeSkp["Lead merges<br/>challenges"]
         Skeptic --> SkpSonnet & SkpOpus
         SkpSonnet & SkpOpus --> MergeSkp
