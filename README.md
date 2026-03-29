@@ -19,10 +19,10 @@ To update to the latest version, re-run both commands.
 ## Usage
 
 ```
-/adversarial-review:run              # review only (default)
-/adversarial-review:run 405          # review specific PR
-/adversarial-review:run --fix        # review + auto-fix consensus issues
-/adversarial-review:run --fix 405    # auto-fix specific PR
+/adversarial-review:run              # auto-fix (default), auto-detect PR
+/adversarial-review:run 405          # auto-fix, specific PR
+/adversarial-review:run --no-fix     # review only, no code modifications
+/adversarial-review:run --no-fix 405 # review only, specific PR
 ```
 
 ## How it works
@@ -44,8 +44,8 @@ flowchart TD
     Gate -->|"Security, auth, DB,<br/>20+ files, or<br/>mechanical failures"| Full["Dual-model<br/>Optimizer + Skeptic<br/>(4 agents)"]
     Standard & Full --> Synth["7. Synthesize"]
     Synth --> ModeCheck{Auto-fix?}
-    ModeCheck -->|"Review only"| Report
-    ModeCheck -->|"--fix"| Apply["Apply consensus<br/>Critical/Major fixes"]
+    ModeCheck -->|"--no-fix"| Report
+    ModeCheck -->|"Default"| Apply["Apply consensus<br/>Critical/Major fixes"]
     Apply --> Verify{"Verify fixes<br/>(max 2 iterations)"}
     Verify -->|"Checks pass"| Report
     Verify -->|"Checks fail,<br/>iteration < 2"| Fix["Fix regressions"] --> Verify
@@ -121,7 +121,7 @@ flowchart TD
 
 ### Steps
 
-0. **Parse arguments** — PR number, `--fix` flag, issue filing opt-in prompt
+0. **Parse arguments** — PR number, `--no-fix` flag (opt out of auto-fix), issue filing opt-in prompt
 1. **Get context** — branch, diff, platform detection (GitHub/GitLab)
 2. **Pull PR/MR feedback** — CodeRabbit, Copilot, human review comments
 3. **Triage feedback** — fix now, create issue (if opted in), or dismiss
@@ -184,7 +184,7 @@ This plugin's architecture is informed by research on LLM code review:
 
 ## Changelog
 
-### 1.2.0 — 2026-03-28
+### 1.2.1 — 2026-03-28
 
 Restructured adversarial review pipeline from background agents to agent teams.
 
@@ -193,6 +193,7 @@ Restructured adversarial review pipeline from background agents to agent teams.
 - **No worktree isolation**: Teammates run in the main repo (not worktrees) so they can write reports to `.claude/reviews/` without permission prompts. Containment enforced by prompt constraints ("report only, do not modify source files")
 - **Branch name sanitization**: `[branch_safe]` (slashes replaced with dashes) used in team names and directory paths to handle `feat/`, `fix/` branch conventions
 - **Teams API semantics documented**: Spawn section documents sequential task IDs, idle notifications, `shutdown_request` protocol, and `TeamDelete` behavior
+- **Auto-fix by default**: Auto-fix now runs by default (no flag required). Use `--no-fix` to opt out and get review-only mode (no code modifications)
 
 ### 1.1.0 — 2026-03-17
 
