@@ -7,10 +7,10 @@ Review all code changes on the current branch that have not been merged yet.
 
 **Usage:**
 ```
-/adversarial-review:run              # review only (default), auto-detect PR
-/adversarial-review:run 405          # review only, specific PR
-/adversarial-review:run --fix        # review + auto-fix, auto-detect PR
-/adversarial-review:run --fix 405    # review + auto-fix, specific PR
+/adversarial-review:run              # auto-fix (default), auto-detect PR
+/adversarial-review:run 405          # auto-fix, specific PR
+/adversarial-review:run --no-fix     # review only, no code modifications
+/adversarial-review:run --no-fix 405 # review only, specific PR
 ```
 
 ## Review artifacts
@@ -38,16 +38,16 @@ The `summary.md` is the **review artifact of record** — it captures the full o
 
 Parse `$ARGUMENTS` for:
 - A PR number (any bare number like `405`)
-- `--fix` flag to enable auto-fix mode
+- `--no-fix` flag to disable auto-fix mode
 
-If `--fix` is present, set `[mode]` to `auto-fix`. Otherwise, set `[mode]` to `review-only`.
+If `--no-fix` is present, set `[mode]` to `review-only`. Otherwise, set `[mode]` to `auto-fix` (default).
 
 If no PR number is provided, auto-detect via `gh pr view --json number`.
 
 | Mode | Behavior |
 |------|----------|
-| `review-only` (default) | Report findings as suggestions. No code is modified. |
-| `auto-fix` (`--fix`) | Apply consensus Critical/Major fixes + bounded verification loop (max 2 iterations). |
+| `auto-fix` (default) | Apply consensus Critical/Major fixes + bounded verification loop (max 2 iterations). |
+| `review-only` (`--no-fix`) | Report findings as suggestions. No code is modified. |
 
 **Prompt for issue creation preference before proceeding:**
 
@@ -231,6 +231,8 @@ TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
 **Teams API semantics**: Task IDs are sequential starting from 1 within a team. Idle notifications are automatic — teammates send them when their turn ends. `shutdown_request` is a built-in protocol message handled at the platform level. `TeamDelete()` uses the current session's team context (no arguments needed).
 
 Spawn all teammates in a single message. They check TaskList, claim unblocked tasks, and work. Teammates with blocked tasks idle until the lead wakes them after completing the merge.
+
+**Do NOT use `isolation: "worktree"`** — agents in worktrees cannot write to the main repo's `.claude/reviews/` directory without permission prompts. All agents run in the main repo directory.
 
 **Full depth** — 4 teammates in one message:
 
