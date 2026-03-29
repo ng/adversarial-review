@@ -113,9 +113,9 @@ flowchart TD
 
     subgraph Artifacts["Review artifacts"]
         direction LR
-        A1[".claude/reviews/&lt;branch_safe&gt;/<br/>optimizer-*.md"]
-        A2[".claude/reviews/&lt;branch_safe&gt;/<br/>skeptic-*.md"]
-        A3[".claude/reviews/&lt;branch_safe&gt;/<br/>summary.md"]
+        A1[".reviews/&lt;branch_safe&gt;/<br/>optimizer-*.md"]
+        A2[".reviews/&lt;branch_safe&gt;/<br/>skeptic-*.md"]
+        A3[".reviews/&lt;branch_safe&gt;/<br/>summary.md"]
     end
 ```
 
@@ -144,7 +144,7 @@ flowchart TD
 
 ## Review artifacts
 
-Agent reports are saved to `.claude/reviews/<branch_safe>/` in the project (branch names are sanitized — `feat/foo` becomes `feat-foo`). The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. Add `.claude/reviews/` to `.gitignore` (or commit `summary.md` files separately if you want review history).
+Agent reports are saved to `.reviews/<branch_safe>/` in the project (branch names are sanitized — `feat/foo` becomes `feat-foo`). The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. Add `.reviews/` to `.gitignore` (or commit `summary.md` files separately if you want review history).
 
 ## Customizing reviews
 
@@ -184,13 +184,17 @@ This plugin's architecture is informed by research on LLM code review:
 
 ## Changelog
 
+### 1.2.2 — 2026-03-28
+
+- **Review artifacts moved**: `.claude/reviews/` → `.reviews/` — the `.claude/` directory is protected by Claude Code (settings/hooks/config), causing permission prompts even with `bypassPermissions`
+
 ### 1.2.1 — 2026-03-28
 
 Restructured adversarial review pipeline from background agents to agent teams.
 
 - **Agent team orchestration**: Optimizer and Skeptic agents are now coordinated as teammates via `TeamCreate`, `TaskCreate` with explicit dependencies, and `SendMessage` for wake-up signals — replacing ad-hoc background agent spawning
 - **Task dependency model**: Sequential pipeline constraints (Skeptic blocked until Optimizer merge completes) are now declarative via `addBlockedBy` rather than implicit wait-and-spawn
-- **No worktree isolation**: Teammates run in the main repo (not worktrees) so they can write reports to `.claude/reviews/` without permission prompts. Containment enforced by prompt constraints ("report only, do not modify source files")
+- **No worktree isolation**: Teammates run in the main repo (not worktrees) so they can write reports to `.reviews/` without permission prompts. Containment enforced by prompt constraints ("report only, do not modify source files")
 - **Branch name sanitization**: `[branch_safe]` (slashes replaced with dashes) used in team names and directory paths to handle `feat/`, `fix/` branch conventions
 - **Teams API semantics documented**: Spawn section documents sequential task IDs, idle notifications, `shutdown_request` protocol, and `TeamDelete` behavior
 - **Auto-fix by default**: Auto-fix now runs by default (no flag required). Use `--no-fix` to opt out and get review-only mode (no code modifications)

@@ -15,10 +15,10 @@ Review all code changes on the current branch that have not been merged yet.
 
 ## Review artifacts
 
-All agent reports are saved to `.claude/reviews/[branch_safe]/` in the project directory so humans can review the raw findings after the review completes. The directory structure:
+All agent reports are saved to `.reviews/[branch_safe]/` in the project directory so humans can review the raw findings after the review completes. The directory structure:
 
 ```text
-.claude/reviews/[branch_safe]/
+.reviews/[branch_safe]/
 ├── optimizer-sonnet.md      # Sonnet Optimizer findings
 ├── optimizer-opus.md        # Opus Optimizer findings (full depth only)
 ├── optimizer-merged.md      # Merged Optimizer report
@@ -28,9 +28,9 @@ All agent reports are saved to `.claude/reviews/[branch_safe]/` in the project d
 └── summary.md               # Persistent review summary (the artifact of record)
 ```
 
-Before writing reports, ensure the directory exists: `mkdir -p [repo_root]/.claude/reviews/[branch_safe]`
+Before writing reports, ensure the directory exists: `mkdir -p [repo_root]/.reviews/[branch_safe]`
 
-Agent reports (optimizer-*.md, skeptic-*.md) are working artifacts — add `.claude/reviews/` to `.gitignore`.
+Agent reports (optimizer-*.md, skeptic-*.md) are working artifacts — add `.reviews/` to `.gitignore`.
 
 The `summary.md` is the **review artifact of record** — it captures the full outcome (what was fixed, disputed, deferred, and any filed issue numbers). If the team wants to keep review history, they can copy or commit summary files separately.
 
@@ -170,7 +170,7 @@ For **standard depth**, use the same pipeline but with 2 teammates (one per pass
 
 ---
 
-**Important**: No teammate auto-fixes code. All produce reports only. The lead synthesizes and applies fixes after both passes complete. This prevents merge conflicts and gives the user control over disputed items. Teammates run without worktree isolation — containment is enforced by prompt constraints ("Do NOT modify any source files. Report only."). Worktrees were removed because agents in worktrees cannot write reports to the main repo's `.claude/reviews/` directory without triggering permission prompts.
+**Important**: No teammate auto-fixes code. All produce reports only. The lead synthesizes and applies fixes after both passes complete. This prevents merge conflicts and gives the user control over disputed items. Teammates run without worktree isolation — containment is enforced by prompt constraints ("Do NOT modify any source files. Report only."). Worktrees were removed because agents in worktrees cannot write reports to the main repo's `.reviews/` directory without triggering permission prompts.
 
 **Model diversity** (full depth only): Each pass runs on BOTH Sonnet and Opus in parallel, then merges their findings. Different models have different blind spots — running both maximizes coverage within each pass, and the adversarial structure (Optimizer vs Skeptic) catches over-corrections across passes.
 
@@ -183,28 +183,28 @@ TeamCreate({
 })
 ```
 
-Ensure the shared report directory exists: `mkdir -p [repo_root]/.claude/reviews/[branch_safe]`
+Ensure the shared report directory exists: `mkdir -p [repo_root]/.reviews/[branch_safe]`
 
 ### Create tasks with dependencies
 
 **Full depth** — 6 tasks:
 
 ```javascript
-TaskCreate({ subject: "Optimizer review (Sonnet)", description: "Review as The Optimizer. Write to .claude/reviews/[branch_safe]/optimizer-sonnet.md" })
+TaskCreate({ subject: "Optimizer review (Sonnet)", description: "Review as The Optimizer. Write to .reviews/[branch_safe]/optimizer-sonnet.md" })
 // → task ID 1
 
-TaskCreate({ subject: "Optimizer review (Opus)", description: "Review as The Optimizer. Write to .claude/reviews/[branch_safe]/optimizer-opus.md" })
+TaskCreate({ subject: "Optimizer review (Opus)", description: "Review as The Optimizer. Write to .reviews/[branch_safe]/optimizer-opus.md" })
 // → task ID 2
 
 TaskCreate({ subject: "Merge Optimizer findings", description: "Deduplicate Sonnet+Opus reports into optimizer-merged.md" })
 // → task ID 3
 TaskUpdate({ taskId: "3", addBlockedBy: ["1", "2"], owner: "lead" })
 
-TaskCreate({ subject: "Skeptic challenge (Sonnet)", description: "Challenge merged Optimizer findings. Write to .claude/reviews/[branch_safe]/skeptic-sonnet.md" })
+TaskCreate({ subject: "Skeptic challenge (Sonnet)", description: "Challenge merged Optimizer findings. Write to .reviews/[branch_safe]/skeptic-sonnet.md" })
 // → task ID 4
 TaskUpdate({ taskId: "4", addBlockedBy: ["3"] })
 
-TaskCreate({ subject: "Skeptic challenge (Opus)", description: "Challenge merged Optimizer findings. Write to .claude/reviews/[branch_safe]/skeptic-opus.md" })
+TaskCreate({ subject: "Skeptic challenge (Opus)", description: "Challenge merged Optimizer findings. Write to .reviews/[branch_safe]/skeptic-opus.md" })
 // → task ID 5
 TaskUpdate({ taskId: "5", addBlockedBy: ["3"] })
 
@@ -216,10 +216,10 @@ TaskUpdate({ taskId: "6", addBlockedBy: ["4", "5"], owner: "lead" })
 **Standard depth** — 2 tasks (no merge tasks needed):
 
 ```javascript
-TaskCreate({ subject: "Optimizer review", description: "Review as The Optimizer. Write to .claude/reviews/[branch_safe]/optimizer-merged.md" })
+TaskCreate({ subject: "Optimizer review", description: "Review as The Optimizer. Write to .reviews/[branch_safe]/optimizer-merged.md" })
 // → task ID 1
 
-TaskCreate({ subject: "Skeptic challenge", description: "Challenge Optimizer findings. Write to .claude/reviews/[branch_safe]/skeptic-merged.md" })
+TaskCreate({ subject: "Skeptic challenge", description: "Challenge Optimizer findings. Write to .reviews/[branch_safe]/skeptic-merged.md" })
 // → task ID 2
 TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
 ```
@@ -232,7 +232,7 @@ TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
 
 Spawn all teammates in a single message. They check TaskList, claim unblocked tasks, and work. Teammates with blocked tasks idle until the lead wakes them after completing the merge.
 
-**Do NOT use `isolation: "worktree"`** — agents in worktrees cannot write to the main repo's `.claude/reviews/` directory without permission prompts. All agents run in the main repo directory.
+**Do NOT use `isolation: "worktree"`** — agents in worktrees cannot write to the main repo's `.reviews/` directory without permission prompts. All agents run in the main repo directory.
 
 **Full depth** — 4 teammates in one message:
 
@@ -246,7 +246,7 @@ Agent({
   prompt: `You are "The Optimizer (Sonnet)" on team "review-[branch_safe]".
   Check TaskList, claim your Optimizer task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [OPTIMIZER_PROMPT — see below]
-  Write findings to .claude/reviews/[branch_safe]/optimizer-sonnet.md`
+  Write findings to .reviews/[branch_safe]/optimizer-sonnet.md`
 })
 
 Agent({
@@ -258,7 +258,7 @@ Agent({
   prompt: `You are "The Optimizer (Opus)" on team "review-[branch_safe]".
   Check TaskList, claim your Optimizer task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [OPTIMIZER_PROMPT — see below]
-  Write findings to .claude/reviews/[branch_safe]/optimizer-opus.md`
+  Write findings to .reviews/[branch_safe]/optimizer-opus.md`
 })
 
 Agent({
@@ -271,7 +271,7 @@ Agent({
   Your task is blocked — wait for the lead to message you when the Optimizer merge is ready.
   Then check TaskList, claim your Skeptic task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [SKEPTIC_PROMPT — see below]
-  Write challenge report to .claude/reviews/[branch_safe]/skeptic-sonnet.md`
+  Write challenge report to .reviews/[branch_safe]/skeptic-sonnet.md`
 })
 
 Agent({
@@ -284,7 +284,7 @@ Agent({
   Your task is blocked — wait for the lead to message you when the Optimizer merge is ready.
   Then check TaskList, claim your Skeptic task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [SKEPTIC_PROMPT — see below]
-  Write challenge report to .claude/reviews/[branch_safe]/skeptic-opus.md`
+  Write challenge report to .reviews/[branch_safe]/skeptic-opus.md`
 })
 ```
 
@@ -300,7 +300,7 @@ Agent({
   prompt: `You are "The Optimizer" on team "review-[branch_safe]".
   Check TaskList, claim your task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [OPTIMIZER_PROMPT — see below]
-  Write findings to .claude/reviews/[branch_safe]/optimizer-merged.md`
+  Write findings to .reviews/[branch_safe]/optimizer-merged.md`
 })
 
 Agent({
@@ -313,7 +313,7 @@ Agent({
   Your task is blocked — wait for the lead to message you when the Optimizer report is ready.
   Then check TaskList, claim your task, and mark it completed when done.
   [SKEPTIC_PROMPT — see below]
-  Write challenge report to .claude/reviews/[branch_safe]/skeptic-merged.md`
+  Write challenge report to .reviews/[branch_safe]/skeptic-merged.md`
 })
 ```
 
@@ -410,9 +410,9 @@ Optimizer teammates auto-claim their tasks and begin reviewing immediately. The 
 
 1. **Wait for Optimizer teammates** — they send idle notifications when their tasks are complete
 2. **Lead handles Optimizer merge** (full depth only):
-   - Read `[repo_root]/.claude/reviews/[branch_safe]/optimizer-sonnet.md` and `optimizer-opus.md`
+   - Read `[repo_root]/.reviews/[branch_safe]/optimizer-sonnet.md` and `optimizer-opus.md`
    - Deduplicate findings that both models flagged (these are high-confidence issues)
-   - Write merged report to `[repo_root]/.claude/reviews/[branch_safe]/optimizer-merged.md` noting which findings came from which model
+   - Write merged report to `[repo_root]/.reviews/[branch_safe]/optimizer-merged.md` noting which findings came from which model
    - Mark merge task completed: `TaskUpdate({ taskId: "3", status: "completed" })`
 3. **Wake Skeptic teammates** — their tasks are now unblocked:
    ```javascript
@@ -420,13 +420,13 @@ Optimizer teammates auto-claim their tasks and begin reviewing immediately. The 
    SendMessage({
      to: "skeptic-sonnet",
      summary: "Optimizer complete — begin challenge",
-     message: "Optimizer findings are ready at [repo_root]/.claude/reviews/[branch_safe]/optimizer-merged.md — check TaskList and begin your challenge."
+     message: "Optimizer findings are ready at [repo_root]/.reviews/[branch_safe]/optimizer-merged.md — check TaskList and begin your challenge."
    })
    // Full depth only — also wake the Opus Skeptic:
    SendMessage({
      to: "skeptic-opus",
      summary: "Optimizer complete — begin challenge",
-     message: "Optimizer findings are ready at [repo_root]/.claude/reviews/[branch_safe]/optimizer-merged.md — check TaskList and begin your challenge."
+     message: "Optimizer findings are ready at [repo_root]/.reviews/[branch_safe]/optimizer-merged.md — check TaskList and begin your challenge."
    })
    ```
 
@@ -449,7 +449,7 @@ CONSTRAINT: Do NOT modify any source files. Write your challenge report only.
 3. Read `REVIEW.md` (repo root, if it exists) for review-only guidance.
    Read `.claude/docs/code-review.md` (if it exists) for project context.
    Also read any other relevant `.claude/docs/` files.
-4. THEN read The Optimizer's merged findings: .claude/reviews/[branch_safe]/optimizer-merged.md
+4. THEN read The Optimizer's merged findings: .reviews/[branch_safe]/optimizer-merged.md
 5. Challenge findings where your independent assessment disagrees with the Optimizer.
 
 For EACH of The Optimizer's findings, evaluate:
@@ -518,9 +518,9 @@ Then, independently review the code for issues The Optimizer missed, especially:
 
 1. **Wait for Skeptic teammates** — they send idle notifications when their tasks are complete
 2. **Lead handles Skeptic merge** (full depth only):
-   - Read `[repo_root]/.claude/reviews/[branch_safe]/skeptic-sonnet.md` and `skeptic-opus.md`
+   - Read `[repo_root]/.reviews/[branch_safe]/skeptic-sonnet.md` and `skeptic-opus.md`
    - For each Optimizer finding: note where both Skeptics agree vs disagree (cross-model consensus strengthens the signal)
-   - Write merged report to `[repo_root]/.claude/reviews/[branch_safe]/skeptic-merged.md`
+   - Write merged report to `[repo_root]/.reviews/[branch_safe]/skeptic-merged.md`
    - Mark merge task completed: `TaskUpdate({ taskId: "6", status: "completed" })`
 3. **Shutdown the team**:
    ```javascript
@@ -532,8 +532,8 @@ Then, independently review the code for issues The Optimizer missed, especially:
 ## Step 7: Synthesize, Apply, and Verify
 
 Read both merged reports:
-1. `[repo_root]/.claude/reviews/[branch_safe]/optimizer-merged.md`
-2. `[repo_root]/.claude/reviews/[branch_safe]/skeptic-merged.md`
+1. `[repo_root]/.reviews/[branch_safe]/optimizer-merged.md`
+2. `[repo_root]/.reviews/[branch_safe]/skeptic-merged.md`
 
 ### Cross-model confidence signals
 
@@ -729,7 +729,7 @@ For each finding, format the comment as:
 
 ### Save persistent review summary
 
-Write a self-contained summary to `[repo_root]/.claude/reviews/[branch_safe]/summary.md` that captures the full review outcome. This file is the **review artifact of record** — it survives after agent reports are cleaned up and contains everything needed to understand what was reviewed, decided, and deferred.
+Write a self-contained summary to `[repo_root]/.reviews/[branch_safe]/summary.md` that captures the full review outcome. This file is the **review artifact of record** — it survives after agent reports are cleaned up and contains everything needed to understand what was reviewed, decided, and deferred.
 
 ```markdown
 # Code Review Summary — [branch] (PR #[number])
