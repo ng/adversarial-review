@@ -1,5 +1,7 @@
 # adversarial-review
 
+![Adversarial review demo — team-based code review with Optimizer and Skeptic agents](docs/images/demo.gif)
+
 Claude Code plugin for adversarial multi-model code review.
 
 Mechanical checks first (free), then AI agents scaled to change complexity. Two agents — **The Optimizer** and **The Skeptic** — review your code independently, challenge each other's findings, and only consensus issues get auto-fixed. A bounded verification loop catches regressions from fixes.
