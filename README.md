@@ -52,7 +52,7 @@ flowchart TD
     Verify -->|"Checks pass"| Report
     Verify -->|"Checks fail,<br/>iteration < 2"| Fix["Fix regressions"] --> Verify
     Verify -->|"Still failing<br/>after 2 rounds"| Report
-    Report["8. Structured Report<br/>+ PR/MR comments"] --> Issues{"File issues?<br/>(opted in at start)"}
+    Report["8. Structured Report<br/>+ PR/MR comments"] --> Issues{"File issues?<br/>(offered after report)"}
     Issues -->|Yes| File["9. File Issues<br/>with full review context"]
     Issues -->|No| Done
     File --> Done([Author reviews & approves])
@@ -123,16 +123,16 @@ flowchart TD
 
 ### Steps
 
-0. **Parse arguments** — PR number, `--no-fix` flag (opt out of auto-fix), issue filing opt-in prompt
+0. **Parse arguments** — PR number, `--no-fix` flag (opt out of auto-fix)
 1. **Get context** — branch, diff, platform detection (GitHub/GitLab)
 2. **Pull PR/MR feedback** — CodeRabbit, Copilot, human review comments
-3. **Triage feedback** — fix now, create issue (if opted in), or dismiss
+3. **Triage feedback** — fix now, note for report, or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
 6. **Adversarial review** — cost-gated: standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies
 7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
 8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
-9. **File issues** — if opted in: deferred, disputed, and pre-existing items filed with full review context
+9. **File issues** — offered after report: deferred, disputed, and pre-existing items filed with full review context
 
 ## Severity levels
 
@@ -162,7 +162,7 @@ Without any of these, universal lenses apply (security, performance, correctness
 
 ## Issue filing
 
-Issue filing is **opt-in** — the plugin asks at the start whether you want issues created for out-of-scope, pre-existing, or deferred findings. If enabled, each issue includes the full review context: problem description, Optimizer reasoning, Skeptic challenge (with confidence score), suggested fix, and source PR/MR reference. Supports both GitHub (`gh`) and GitLab (API via `$GITLAB_PAT`).
+Issue filing is **offered after the review completes** — the plugin runs the full review uninterrupted, then asks if you want issues created for deferred, disputed, and pre-existing findings. Each issue includes the full review context: problem description, Optimizer reasoning, Skeptic challenge (with confidence score), suggested fix, and source PR/MR reference. Supports both GitHub (`gh`) and GitLab (API via `$GITLAB_PAT`).
 
 ## Design rationale
 
@@ -211,7 +211,7 @@ Improvements informed by head-to-head comparison with Anthropic's official code-
 - **Lower confidence report section**: Findings where only one model flagged it, Skeptic confidence was 50-74, or Haiku score was marginal are surfaced as "worth a second look" rather than dropped
 - **Independent Skeptic assessment**: Skeptic now reads the diff and forms impressions before seeing Optimizer findings, strengthening its ability to catch false positives and find missed issues
 - **GitLab support**: Platform auto-detection via `git remote -v`, with GitLab API support for MR metadata, inline discussions, issue filing, and pipeline status (via `$GITLAB_PAT` / `$GITLAB_ORG_PAT`)
-- **Opt-in issue filing**: Issue creation is now prompted at the start of the review rather than at the end, giving the user control before the pipeline runs
+- **Post-review issue filing**: Issue creation offered after the review completes rather than blocking at the start
 
 ### 1.0.0 — 2026-03-14
 
