@@ -49,11 +49,7 @@ If no PR number is provided, auto-detect via `gh pr view --json number`.
 | `auto-fix` (default) | Apply consensus Critical/Major fixes + bounded verification loop (max 2 iterations). |
 | `review-only` (`--no-fix`) | Report findings as suggestions. No code is modified. |
 
-**Prompt for issue creation preference before proceeding:**
-
-> "Should I file issues for out-of-scope, pre-existing, or deferred findings discovered during the review? (y/n)"
-
-Store the answer as `[file-issues]` (`yes` or `no`). This controls whether Steps 3 and 9 create issues or just note them in the report.
+Do not prompt for issue filing before the review. All deferred, disputed, and pre-existing findings are noted in the report. After presenting the report (Step 8), offer to file issues — see Step 9.
 
 ## Step 1: Get Context
 
@@ -103,8 +99,7 @@ If no PR/MR exists, skip to Step 4.
 
 For each feedback item, triage:
 - **Fix now**: If the issue is valid and in scope, fix it directly
-- **Create issue** (only if `[file-issues]` = `yes`): If valid but out of scope or pre-existing, create an issue (GitHub: `gh issue create`, GitLab: `curl -X POST ... "$GITLAB_URL/api/v4/projects/[project_id]/issues"`)
-- **Note for report** (if `[file-issues]` = `no`): If valid but out of scope or pre-existing, note it in the report for manual follow-up
+- **Note for report**: If valid but out of scope or pre-existing, note it in the report for follow-up (issues can be filed after the review via Step 9)
 - **Dismiss**: If the feedback is incorrect or not applicable, note why
 
 After addressing all items:
@@ -767,9 +762,11 @@ was 30-60 — worth a second look but not confirmed issues]
 
 ## Step 9: File Issues for Deferred and Disputed Items
 
-**Skip this step entirely if `[file-issues]` = `no`.** Note deferred/disputed items in the report only.
+After presenting the report, offer to file issues:
 
-If `[file-issues]` = `yes`, create an issue for each deferred, disputed, or pre-existing item:
+> "Would you like me to file GitHub/GitLab issues for the deferred, disputed, and pre-existing items?"
+
+If the user declines or doesn't respond, stop here. If they agree, create an issue for each deferred, disputed, or pre-existing item:
 
 **GitHub (`[platform]` = `github`):**
 ```bash
