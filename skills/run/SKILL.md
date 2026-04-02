@@ -144,22 +144,54 @@ These are free, high-confidence issues that go directly into the final report. T
 
 ## Step 6: Adversarial Agent Review
 
-### Cost gating — choose review depth
+### Classify change types
 
-Before launching agents, classify the change to avoid overspending on simple PRs:
+Before choosing review depth, classify the change by analyzing `git diff --stat` output and file contents. Assign **every changed file** to one or more change types:
 
-| Trigger | Review depth | Agents |
-|---------|-------------|--------|
-| Docs, config, typos only | **Skip** — mechanical checks (Step 5) are sufficient | 0 |
-| Standard code changes | **Standard** — Sonnet-only Optimizer + Skeptic | 2 |
-| Any escalation trigger fires | **Full** — dual-model Optimizer + Skeptic (Sonnet + Opus) | 4 |
+| Change type | File patterns | Activated lenses |
+|-------------|--------------|-----------------|
+| **auth** | `**/auth/**`, `**/iam/**`, `**/login*`, `**/session*`, `**/middleware/auth*`, `**/permissions*`, `**/rbac*` | Security, Deception |
+| **database** | `**/migrations/**`, `*.sql`, `**/schema*`, `**/models/**` (ORM), `**/seeds/**` | Correctness, Performance (N+1, indexes), Blast radius |
+| **crypto** | `**/crypto*`, `**/encrypt*`, `**/tls*`, `**/certs/**`, files importing crypto libs | Security, Correctness |
+| **api** | `**/routes/**`, `**/handlers/**`, `**/controllers/**`, `**/api/**`, `**/graphql/**`, `**/resolvers/**` | Security (input validation, auth), Performance (limits), Type safety |
+| **frontend** | `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `**/components/**` | Accessibility (ARIA, keyboard nav), UX (loading/error/empty states), Performance (renders) |
+| **infra** | `Dockerfile*`, `docker-compose*`, `*.tf`, `*.yaml` (k8s), `**/ci/**`, `.github/workflows/**`, `**/helm/**` | Security (secrets, permissions), Correctness (env vars, ports) |
+| **config** | `*.json` (non-package), `*.yaml` (non-k8s), `*.toml`, `*.env*`, `*.ini` | Security (secrets), Correctness |
+| **test** | `**/test/**`, `**/tests/**`, `**/__tests__/**`, `*.test.*`, `*.spec.*` | Correctness (coverage gaps, flaky patterns) |
+| **docs** | `*.md`, `*.mdx`, `*.rst`, `**/docs/**`, `CHANGELOG*` | (no lenses — skip unless mixed with code) |
+| **types** | `*.d.ts`, `**/types/**`, `**/interfaces/**`, `**/*.proto`, `**/schemas/**` | Type safety, Blast radius (downstream consumers) |
+| **general** | Everything else | All universal lenses |
 
-**Escalation triggers** (if ANY are true, use full dual-model):
-- Changed files touch auth, security, IAM, database migrations, or encryption
-- PR labels include `security`, `breaking-change`, or `migration`
-- Mechanical checks (Step 5) found build or test failures
-- More than 20 files changed (large blast radius)
-- `.claude/docs/code-review.md` contains 🔴 Critical lenses that match changed file patterns
+A single file can match multiple types (e.g., `api/auth/middleware.ts` → auth + api). Store as `[change_types]` — the union of all matched types for the PR.
+
+### Cost gating — weighted escalation scoring
+
+Assign escalation points based on what's in the diff. Each trigger adds to a cumulative score:
+
+| Trigger | Points | Rationale |
+|---------|--------|-----------|
+| `[change_types]` includes **auth**, **crypto**, or **database** | +3 each | High-risk domains where bugs have outsized impact |
+| `[change_types]` includes **api** with new/modified endpoints | +2 | Public surface area changes need dual-model coverage |
+| `[change_types]` includes **infra** | +2 | Infrastructure changes are hard to roll back |
+| PR labels include `security`, `breaking-change`, or `migration` | +3 | Explicit risk signals from the team |
+| Mechanical checks (Step 5) found build or test failures | +3 | Something is already broken — need thorough review |
+| More than 20 files changed | +2 | Large blast radius |
+| More than 50 files changed | +3 (replaces +2) | Very large blast radius |
+| `.claude/docs/code-review.md` has 🔴 Critical lenses matching changed files | +2 | Project-specific high-risk patterns |
+| Only **docs**, **config**, or **test** types (no code changes) | -10 | De-escalate pure non-code changes |
+| `[change_types]` includes **types** with exported interfaces changed | +1 | Downstream breakage risk |
+
+**Score → depth mapping:**
+
+| Score | Review depth | Agents |
+|-------|-------------|--------|
+| ≤ 0 | **Skip** — mechanical checks sufficient | 0 |
+| 1–4 | **Standard** — Sonnet-only Optimizer + Skeptic | 2 |
+| ≥ 5 | **Full** — dual-model Optimizer + Skeptic (Sonnet + Opus) | 4 |
+
+Log the score breakdown in the report: `Escalation score: [N] ([trigger1] +X, [trigger2] +Y, ...) → [depth]`
+
+Pass `[change_types]` and their activated lenses to the agent prompts so agents prioritize the most relevant lenses for this specific PR instead of applying all lenses uniformly.
 
 For **standard depth**, use the same pipeline but with 2 teammates (one per pass). For **full depth**, use 4 teammates (Sonnet + Opus per pass).
 
@@ -319,6 +351,8 @@ Agent({
 ```
 YOUR ROLE: Find every issue worth fixing. Be thorough and constructive.
 CONSTRAINT: Do NOT modify any source files. Write your findings to a report file only.
+BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem field: ≤50 words.
+  Suggested fix: concrete code or ≤30 words describing the approach. No preamble, no filler.
 
 1. WALKTHROUGH FIRST: Before looking for issues, write a 2-3 sentence summary of what
    this branch does and why. Understand the intent before critiquing the implementation.
@@ -337,7 +371,24 @@ CONSTRAINT: Do NOT modify any source files. Write your findings to a report file
    implementation addresses ALL requirements and acceptance criteria. Flag gaps as
    findings with category "Completeness".
 
-5. Review against these universal lenses:
+5. CHANGE-TYPE STRATEGY: This PR's detected change types are: [change_types].
+   Prioritize the activated lenses for these types, then apply universal lenses.
+
+   **Type-specific strategies** (apply all that match `[change_types]`):
+
+   | Change type | Priority checks |
+   |-------------|----------------|
+   | **auth** | Token validation paths, session expiry, privilege escalation, IDOR, default-deny vs default-allow |
+   | **database** | Migration reversibility, index coverage for new queries, N+1 in ORM calls, data loss on rollback, constraint integrity |
+   | **crypto** | Hardcoded keys/IVs, deprecated algorithms, timing side-channels, key rotation paths |
+   | **api** | Input validation on all params, rate limiting, auth middleware on new routes, response schema consistency, breaking changes to existing contracts |
+   | **frontend** | ARIA labels on interactive elements, keyboard navigation, focus management, loading/error/empty states, memo/callback stability, bundle size impact |
+   | **infra** | Secrets in plain text, overly permissive IAM/RBAC, resource limits, health check coverage, rollback plan |
+   | **types** | Exported interface changes that break downstream consumers, `any` escape hatches, exhaustive discriminated unions |
+   | **test** | Flaky patterns (timers, network, ordering), coverage of edge cases vs happy path only, test isolation |
+   | **general** | All universal lenses below |
+
+6. Universal lenses (always apply, but deprioritize if type-specific lenses cover them):
    - Security: auth checks, input validation, secrets handling, injection vectors
    - Performance: N+1 queries, missing indexes, unnecessary computation, missing limits
    - Correctness: edge cases, error handling, race conditions, state management
@@ -362,7 +413,16 @@ CONSTRAINT: Do NOT modify any source files. Write your findings to a report file
 
    PLUS any domain-specific lenses from the project's `.claude/docs/code-review.md`.
 
-6. Write your findings in this exact format:
+7. FIX QUALITY GUARDRAILS: When writing suggested fixes, avoid these anti-patterns:
+   - Do NOT suggest adding abstractions, helpers, or utilities for a one-time fix
+   - Do NOT suggest wrapping things in feature flags or backwards-compatibility shims
+   - Do NOT suggest adding error handling for scenarios that cannot occur given the
+     surrounding code and framework guarantees
+   - Do NOT suggest refactoring adjacent code that isn't part of the problem
+   - Three similar lines of code is better than a premature abstraction
+   - The fix should be the minimum change that resolves the issue correctly
+
+8. Write your findings in this exact format:
 
    # Optimizer Findings ([model]) — [branch]
 
@@ -392,11 +452,11 @@ CONSTRAINT: Do NOT modify any source files. Write your findings to a report file
    - ⚪ Nit: [count]
    - 🟣 Pre-existing: [count]
 
-7. PRE-EXISTING BUGS: If you notice bugs in the surrounding code that were NOT
+9. PRE-EXISTING BUGS: If you notice bugs in the surrounding code that were NOT
    introduced by this PR, still report them but mark severity as 🟣 Pre-existing.
    These are valuable to surface but are not the PR author's fault.
 
-8. Do NOT commit, push, or modify source files. Report only.
+10. Do NOT commit, push, or modify source files. Report only.
 ```
 
 ### Orchestration — Optimizer phase
@@ -436,6 +496,27 @@ Skeptic teammates are already spawned and waiting. Once woken by the lead, they 
 ```text
 YOUR ROLE: Challenge The Optimizer's findings. Find flaws in their suggestions. Catch what they missed.
 CONSTRAINT: Do NOT modify any source files. Write your challenge report only.
+BREVITY: Keep each Challenge field to ≤50 words. Alternative field: concrete code or ≤30 words.
+  No preamble, no filler, no restating the Optimizer's finding before challenging it.
+
+ANTI-RATIONALIZATION PROTOCOL: You have two documented failure patterns. Be vigilant:
+  1. RUBBER-STAMPING — agreeing with the Optimizer without independent verification.
+     You must form your own assessment BEFORE reading the Optimizer's report. If you find
+     yourself agreeing with everything, you are likely rubber-stamping.
+  2. LAZY DISAGREEMENT — disagreeing based on reasoning alone without running tools.
+     "I think this is fine" is not a valid challenge. Run the test, check the type, grep
+     for the pattern. If you cannot validate, say so explicitly and downgrade confidence.
+
+  The following are NOT valid bases for a verdict:
+  - "The code looks correct based on my reading" (reading is not validation)
+  - "The Optimizer's tests already cover this" (did YOU run them? what was the output?)
+  - "This pattern is common in the codebase" (common ≠ correct — grep and verify)
+  - "The fix seems reasonable" (reasonable ≠ safe — check for regressions)
+  - "This is probably fine" (probably ≠ verified)
+
+  Every ✅ Agree and ⚠️ Disagree verdict MUST include a **Evidence** field with actual
+  command output (test results, grep output, type checker output, git blame). A verdict
+  without an Evidence field is not a verdict — it is a guess. Label it accordingly.
 
 1. Read ALL changed files FIRST: git diff origin/[base]...HEAD
 2. Form your own initial impressions of the code quality — note potential issues
@@ -447,10 +528,17 @@ CONSTRAINT: Do NOT modify any source files. Write your challenge report only.
 4. THEN read The Optimizer's merged findings: .reviews/[branch_safe]/optimizer-merged.md
 5. Challenge findings where your independent assessment disagrees with the Optimizer.
 
+CHANGE-TYPE CONTEXT: This PR's detected change types are: [change_types].
+Use the type-specific strategies from the Optimizer to inform your challenges — e.g., if
+this is a **database** change, verify migration reversibility claims; if **auth**, test
+privilege escalation paths; if **frontend**, check accessibility claims with actual ARIA
+attribute verification.
+
 For EACH of The Optimizer's findings, evaluate:
 - Is the issue real or a false positive?
 - Would the suggested fix introduce new bugs, breaking changes, or regressions?
-- Is the fix over-engineered for the actual risk?
+- Is the fix over-engineered for the actual risk? (watch for premature abstractions,
+  unnecessary helpers, feature flags where a direct fix suffices)
 - Does the severity rating match the actual impact?
 - Is there a simpler or safer alternative?
 
@@ -482,14 +570,19 @@ Then, independently review the code for issues The Optimizer missed, especially:
    ## Challenges to Optimizer Findings
 
    ### RE: Finding [N] — [Optimizer's title]
-   - **Verdict**: ✅ Agree | ⚠️ Disagree | 🔄 Agree with modifications
+   - **Verdict**: ✅ Agree | ⚠️ Disagree | 🔄 Agree with modifications | 🚫 Cannot verify
    - **Confidence**: [0-100] (0=pure guess, 50=reasoning only — no tool validation,
      75=validated with grep/blame/tests, 100=mechanically confirmed — test fails, lint errors, etc.)
+   - **Evidence**: [actual command output that supports this verdict — REQUIRED for ✅, ⚠️, and 🔄,
+     omit only for 🚫 Cannot verify]
    - **Challenge**: [why the suggestion is wrong, risky, or over-engineered — be specific]
    - **Alternative**: [better approach, if applicable]
    - **Risk if applied as-is**: [what could break]
 
    (Repeat for each Optimizer finding)
+
+   For 🚫 Cannot verify: state what you tried, why it failed, and your best guess with
+   confidence capped at 40.
 
    ## Missed Issues
 
@@ -502,8 +595,9 @@ Then, independently review the code for issues The Optimizer missed, especially:
 
    ## Statistics
    - Optimizer findings challenged: [count]
-   - Findings agreed with: [count]
+   - Findings agreed with (tool-validated): [count]
    - Findings agreed with modifications: [count]
+   - Findings where verification unavailable: [count]
    - New issues found: [count]
 
 7. Do NOT commit, push, or modify source files. Report only.
@@ -525,6 +619,13 @@ Then, independently review the code for issues The Optimizer missed, especially:
    ```
 
 ## Step 7: Synthesize, Apply, and Verify
+
+### Coordinator constraints
+
+During synthesis, the lead operates in **read-only coordinator mode**:
+- **Allowed**: Read report files, Read source files (for context), Write to `.reviews/` directory, Run mechanical checks (lint/typecheck/build/test) during verify loop
+- **NOT allowed**: Edit, Write, or delete any source files directly during synthesis. Source modifications happen ONLY in the "Apply agreed fixes" sub-step below, and ONLY for undisputed Critical/Major findings in auto-fix mode.
+- **Rationale**: Separating synthesis judgment from code modification prevents accidental changes during the analysis phase. The lead reads reports, decides what to fix, then applies fixes as a distinct step.
 
 Read both merged reports:
 1. `[repo_root]/.reviews/[branch_safe]/optimizer-merged.md`
@@ -553,6 +654,7 @@ Before resolving findings, apply confidence filters to Skeptic verdicts:
 | ⚠️ Disagree | 75-100 | Strong disagreement — present as Disputed |
 | ⚠️ Disagree | < 50 | Weak disagreement — treat as "Disputed" rather than rejected |
 | 🔄 Modified | any | Apply modified suggestion at stated confidence |
+| 🚫 Cannot verify | any (capped 40) | Treat as "Lower Confidence Items" — surfaced but not auto-fixed |
 
 ### Resolve each finding
 
@@ -567,6 +669,7 @@ For each Optimizer finding, cross-reference The Skeptic's verdict and confidence
 | ⚠️ Disagree (confidence >= 50) | Report the dispute with both sides |
 | ⚠️ Disagree (confidence < 50) | Report as disputed (weak disagreement) — do not reject |
 | 🔄 Agree with modifications | Report with the modified suggestion |
+| 🚫 Cannot verify | Report as unverified — note that evidence was insufficient |
 
 All findings are suggestions only. No code is modified.
 
@@ -578,6 +681,7 @@ All findings are suggestions only. No code is modified.
 | ✅ Agree (confidence < 50) | Note only — do NOT auto-fix low-confidence items |
 | ⚠️ Disagree | Present the dispute to the user — do NOT auto-fix |
 | 🔄 Agree with modifications | Apply the modified version (Critical/Major) or note it (Minor/Nit) |
+| 🚫 Cannot verify | Note only — do NOT auto-fix; surface as unverified to the user |
 
 For Skeptic's missed issues: treat as new findings. In auto-fix mode, apply Critical/Major fixes.
 
@@ -665,7 +769,7 @@ Compile findings from all sources into:
 
 Report sections:
 - **Summary**: What was added/modified/removed
-- **Review Depth**: Which tier was used (skip / standard / full) and why
+- **Review Depth**: Which tier was used (skip / standard / full), escalation score breakdown, and detected change types
 - **Mechanical Findings**: Issues caught by lint/typecheck/build/tests (free)
 - **PR Feedback** (if PR/MR exists): Items addressed vs issues created vs dismissed
 - **Consensus Fixes Applied**: Issues both agents agreed on that were auto-fixed (note which models flagged each)
@@ -729,7 +833,8 @@ Write a self-contained summary to `[repo_root]/.reviews/[branch_safe]/summary.md
 ```markdown
 # Code Review Summary — [branch] (PR #[number])
 Date: [YYYY-MM-DD]
-Depth: [skip | standard | full]
+Depth: [skip | standard | full] (score: [N] — [breakdown])
+Change types: [change_types]
 Branch: [branch] → [base]
 
 ## What changed
