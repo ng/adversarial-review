@@ -573,7 +573,7 @@ Then, independently review the code for issues The Optimizer missed, especially:
    - **Verdict**: ✅ Agree | ⚠️ Disagree | 🔄 Agree with modifications | 🚫 Cannot verify
    - **Confidence**: [0-100] (0=pure guess, 50=reasoning only — no tool validation,
      75=validated with grep/blame/tests, 100=mechanically confirmed — test fails, lint errors, etc.)
-   - **Evidence**: [actual command output that supports this verdict — REQUIRED for ✅ and ⚠️,
+   - **Evidence**: [actual command output that supports this verdict — REQUIRED for ✅, ⚠️, and 🔄,
      omit only for 🚫 Cannot verify]
    - **Challenge**: [why the suggestion is wrong, risky, or over-engineered — be specific]
    - **Alternative**: [better approach, if applicable]
@@ -669,6 +669,7 @@ For each Optimizer finding, cross-reference The Skeptic's verdict and confidence
 | ⚠️ Disagree (confidence >= 50) | Report the dispute with both sides |
 | ⚠️ Disagree (confidence < 50) | Report as disputed (weak disagreement) — do not reject |
 | 🔄 Agree with modifications | Report with the modified suggestion |
+| 🚫 Cannot verify | Report as unverified — note that evidence was insufficient |
 
 All findings are suggestions only. No code is modified.
 
@@ -680,6 +681,7 @@ All findings are suggestions only. No code is modified.
 | ✅ Agree (confidence < 50) | Note only — do NOT auto-fix low-confidence items |
 | ⚠️ Disagree | Present the dispute to the user — do NOT auto-fix |
 | 🔄 Agree with modifications | Apply the modified version (Critical/Major) or note it (Minor/Nit) |
+| 🚫 Cannot verify | Note only — do NOT auto-fix; surface as unverified to the user |
 
 For Skeptic's missed issues: treat as new findings. In auto-fix mode, apply Critical/Major fixes.
 
