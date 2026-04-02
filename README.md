@@ -41,9 +41,9 @@ flowchart TD
     Triage --> Docs["4. Read Convention Docs<br/>REVIEW.md · .claude/docs/"]
     Docs --> Mechanical["5. Mechanical Checks<br/>lint · typecheck · build · test"]
     Mechanical --> Gate{"6. Cost Gate"}
-    Gate -->|"Docs/config only"| Report
-    Gate -->|"Standard changes"| Standard["Sonnet-only<br/>Optimizer + Skeptic<br/>(2 agents)"]
-    Gate -->|"Security, auth, DB,<br/>20+ files, or<br/>mechanical failures"| Full["Dual-model<br/>Optimizer + Skeptic<br/>(4 agents)"]
+    Gate -->|"Score ≤ 0"| Report
+    Gate -->|"Score 1–4"| Standard["Sonnet-only<br/>Optimizer + Skeptic<br/>(2 agents)"]
+    Gate -->|"Score ≥ 5"| Full["Dual-model<br/>Optimizer + Skeptic<br/>(4 agents)"]
     Standard & Full --> Synth["7. Synthesize"]
     Synth --> ModeCheck{Auto-fix?}
     ModeCheck -->|"--no-fix"| Report
@@ -129,7 +129,7 @@ flowchart TD
 3. **Triage feedback** — fix now, note for report, or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
-6. **Adversarial review** — cost-gated: standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies
+6. **Adversarial review** — change-type classification, weighted escalation scoring, then standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies
 7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
 8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
 9. **File issues** — offered after report: deferred, disputed, and pre-existing items filed with full review context
@@ -166,7 +166,9 @@ Issue filing is **offered after the review completes** — the plugin runs the f
 
 ## Design rationale
 
-This plugin's architecture is informed by research on LLM code review:
+This plugin's architecture is informed by research on LLM code review and first-principles patterns from Claude Code's own agent orchestration internals.
+
+### Research foundations
 
 **LLMs cannot reliably self-correct through reasoning alone** ([Huang et al., 2023](https://arxiv.org/abs/2310.01798)). Forced self-correction can degrade quality — LLMs flip correct answers to incorrect at similar rates to actually fixing errors. We mitigate this by: (1) using different models across agents (Sonnet + Opus have different blind spots), (2) not forcing the Skeptic to disagree — it only challenges findings where it has substantive objections, and (3) directing the Skeptic to validate with external tools (tests, linters, type checkers) rather than pure reasoning.
 
@@ -176,15 +178,41 @@ This plugin's architecture is informed by research on LLM code review:
 
 **Progressive cost-gating and verification loops** are inspired by [Ouroboros](https://github.com/Q00/ouroboros)'s three-stage evaluation pipeline: run free mechanical checks first, only escalate to expensive LLM review when needed, and use bounded iterative verification (max 2 rounds) to catch regressions without risking infinite fix-break cycles.
 
+### Learned from Claude Code internals
+
+Several patterns in this plugin were directly informed by studying Claude Code's own agent architecture (via the [March 2026 source map disclosure](https://github.com/anthropics/claude-code/issues/1956)):
+
+**Anti-rationalization guards** — Claude Code's built-in verification agent explicitly lists its own failure modes in its prompt: "You have two documented failure patterns. First, verification avoidance... Second, being seduced by the first 80%." It also enumerates specific rationalizations that don't count as validation ("The code looks correct based on my reading"). We adopted this pattern for The Skeptic — explicitly naming rubber-stamping and lazy disagreement as failure modes, listing invalid verdict bases, and requiring tool-output evidence for every Agree/Disagree verdict.
+
+**Evidence-gated verdicts** — Claude Code's verification agent requires a `Command run` block with actual output for every PASS verdict. "A check without a Command run block is not a PASS." We applied this as the mandatory `Evidence` field in Skeptic verdicts — no evidence means the verdict is a guess, labeled accordingly. This forces the Skeptic to actually run tests, grep patterns, and check types rather than reasoning about whether the Optimizer was right.
+
+**Change-type strategy matrices** — Claude Code's verification agent uses different verification strategies depending on change type (frontend, backend, CLI, infra, library, bug fix, DB migrations, refactoring). We adopted this as the change-type classification step: every changed file is mapped to a type (auth, database, crypto, api, frontend, infra, etc.) with type-specific priority checks. An auth change gets privilege-escalation and IDOR checks; a database change gets migration-reversibility and N+1 checks; a frontend change gets ARIA and keyboard-nav checks.
+
+**Coordinator-only synthesis** — Claude Code's Coordinator Mode restricts the coordinator to only 4 tools (Agent, TaskStop, SendMessage, SyntheticOutput) while workers get the full toolset. This prevents the coordinator from accidentally modifying files during synthesis. We adopted this as explicit read-only constraints during Step 7: the lead can only read reports and write to `.reviews/` during synthesis, with source modifications restricted to the explicit "Apply agreed fixes" sub-step.
+
+**Numeric output anchors** — Claude Code's internal prompts use specific word-count limits ("Keep text between tool calls to ≤25 words") which showed measurable token reduction in A/B testing. We applied this to both agent prompts: Optimizer findings ≤50 words per Problem field, suggested fixes ≤30 words, Skeptic challenges ≤50 words. This reduces verbose reasoning that inflates cost without improving signal.
+
+**Fix quality anti-patterns** — Claude Code's system prompt explicitly tells the model "Three similar lines of code is better than a premature abstraction" and "Don't add features, refactor code, or make 'improvements' beyond what was asked." We added these as Fix Quality Guardrails in the Optimizer prompt — preventing suggested fixes from over-engineering the solution with unnecessary abstractions, feature flags, or adjacent refactoring.
+
 ## Known limitations
 
 - A determined attacker who understands the specific models, prompts, and consensus logic could craft code that fools all four agents simultaneously. This is a defense-in-depth layer, not a security boundary.
 - The Skeptic's self-correction is bounded but not eliminated — it can still flip correct Optimizer findings to incorrect (Huang et al.). Multi-model diversity reduces but does not remove this risk.
 - Deception detection relies on the LLM's ability to reason about naming vs behavior, which is itself susceptible to sophisticated adversarial patterns (Bernstein et al.).
-- Cost gating heuristics (20+ files, label-based triggers) are coarse. Some high-risk changes in small diffs may get standard depth when they warrant full depth.
+- Weighted escalation scoring improves on coarse heuristics but remains an approximation — some high-risk patterns in low-scoring diffs may still get standard depth. Projects can fine-tune via `.claude/docs/code-review.md` critical lenses.
 - Human review remains essential for high-risk changes.
 
 ## Changelog
+
+### 1.3.0 — 2026-04-01
+
+Improvements informed by first-principles patterns from Claude Code's agent orchestration internals.
+
+- **Anti-rationalization guards**: Skeptic prompt now explicitly names its failure modes (rubber-stamping, lazy disagreement), lists invalid verdict bases, and requires tool-output evidence for every Agree/Disagree verdict. New 🚫 Cannot verify verdict (confidence capped at 40) for when tools can't validate
+- **Change-type classification**: Every changed file is mapped to a type (auth, database, crypto, api, frontend, infra, config, test, docs, types) with type-specific priority checks and activated lenses — agents focus on what matters for this specific PR instead of applying all lenses uniformly
+- **Weighted escalation scoring**: Replaced binary "any trigger fires → full depth" with a point-based system. High-risk domains (auth/crypto/db) score +3, medium-risk (api/infra) +2, with de-escalation (-10) for pure docs/config/test changes. Score breakdown logged in report for auditability
+- **Coordinator-only synthesis**: Lead operates in read-only mode during synthesis — source modifications restricted to the explicit "Apply agreed fixes" sub-step, preventing accidental edits during analysis
+- **Prompt engineering**: Numeric word-count anchors (findings ≤50 words, fixes ≤30 words) reduce verbose reasoning. Fix Quality Guardrails prevent over-engineered suggestions (no premature abstractions, no feature flags for direct fixes, minimum viable change only)
 
 ### 1.2.2 — 2026-03-28
 
