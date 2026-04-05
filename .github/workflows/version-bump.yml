@@ -71,4 +71,6 @@ jobs:
           git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
           git commit -m "chore: bump version to $NEW"
           git tag "v$NEW"
-          git push && git push --tags
+          MAJOR=$(echo "$NEW" | cut -d. -f1)
+          git tag -fa "v$MAJOR" -m "v$MAJOR: latest $MAJOR.x release"
+          git push && git push --tags --force
