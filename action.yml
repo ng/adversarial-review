@@ -1,5 +1,5 @@
 name: 'Adversarial Code Review'
-description: 'Multi-model adversarial code review with Optimizer/Skeptic agents (Sonnet + Opus). Auto-fixes consensus issues, surfaces disputes.'
+description: 'Multi-model adversarial code review — Optimizer and Skeptic agents challenge each other, auto-fix consensus issues.'
 author: 'ng'
 
 branding:
