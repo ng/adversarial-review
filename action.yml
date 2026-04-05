@@ -37,5 +37,5 @@ runs:
         plugin_marketplaces: 'https://github.com/ng/adversarial-review.git'
         plugins: 'adversarial-review'
         prompt: '/adversarial-review:run ${{ inputs.mode == ''no-fix'' && ''--no-fix'' || '''' }} ${{ inputs.pr_number }}'
-        allowed_tools: 'Bash(git *),Bash(gh *),Bash(pnpm *),Bash(npm *),Bash(npx *),Bash(yarn *),Bash(cargo *),Bash(go *),Bash(python *),Bash(pip *),Bash(make *)${{ inputs.allowed_tools != '''' && format('',{0}'', inputs.allowed_tools) || '''' }}'
+        allowed_tools: 'Bash(git *),Bash(gh *),Bash(curl *),Bash(jq *),Bash(pnpm *),Bash(npm *),Bash(npx *),Bash(yarn *),Bash(cargo *),Bash(go *),Bash(python *),Bash(pip *),Bash(make *)${{ inputs.allowed_tools != '''' && format('',{0}'', inputs.allowed_tools) || '''' }}'
         model: ${{ inputs.model }}
