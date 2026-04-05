@@ -1,0 +1,41 @@
+name: 'Adversarial Code Review'
+description: 'Multi-model adversarial code review with Optimizer/Skeptic agents (Sonnet + Opus). Auto-fixes consensus issues, surfaces disputes.'
+author: 'ng'
+
+branding:
+  icon: 'shield'
+  color: 'purple'
+
+inputs:
+  claude_code_oauth_token:
+    description: 'Claude Code OAuth token (from Anthropic Console)'
+    required: true
+  pr_number:
+    description: 'Pull request number to review. Defaults to the triggering PR.'
+    required: false
+    default: '${{ github.event.pull_request.number }}'
+  mode:
+    description: 'Review mode: "auto-fix" (default) applies consensus fixes, "no-fix" reports only.'
+    required: false
+    default: 'auto-fix'
+  allowed_tools:
+    description: 'Additional allowed tools (comma-separated). git, gh, and common build tools are included by default.'
+    required: false
+    default: ''
+  model:
+    description: 'Model to use for the lead agent (e.g. "opus", "sonnet"). Defaults to the claude-code-action default.'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run Adversarial Review
+      uses: anthropics/claude-code-action@1eddb334cfa79fdb21ecbe2180ca1a016e8e7d47 # v1
+      with:
+        claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
+        plugin_marketplaces: 'https://github.com/ng/adversarial-review.git'
+        plugins: 'adversarial-review'
+        prompt: '/adversarial-review:run ${{ inputs.mode == ''no-fix'' && ''--no-fix'' || '''' }} ${{ inputs.pr_number }}'
+        allowed_tools: 'Bash(git *),Bash(gh *),Bash(curl *),Bash(jq *),Bash(pnpm *),Bash(npm *),Bash(npx *),Bash(yarn *),Bash(cargo *),Bash(go *),Bash(python *),Bash(pip *),Bash(make *)${{ inputs.allowed_tools != '''' && format('',{0}'', inputs.allowed_tools) || '''' }}'
+        model: ${{ inputs.model }}

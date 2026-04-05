@@ -27,6 +27,51 @@ To update to the latest version, re-run both commands.
 /adversarial-review:run --no-fix 405 # review only, specific PR
 ```
 
+## GitHub Action
+
+Use as a GitHub Action to run adversarial reviews automatically on PRs:
+
+```yaml
+name: Adversarial Code Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, labeled]
+
+jobs:
+  review:
+    if: >-
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'review'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ng/adversarial-review@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+```
+
+### Inputs
+
+| Input | Required | Default | Description |
+|-------|----------|---------|-------------|
+| `claude_code_oauth_token` | Yes | — | Claude Code OAuth token |
+| `pr_number` | No | Triggering PR | PR number to review |
+| `mode` | No | `auto-fix` | `auto-fix` or `no-fix` (report only) |
+| `allowed_tools` | No | — | Additional allowed tools (comma-separated) |
+| `model` | No | — | Model override for lead agent |
+
+### Recommended triggers
+
+Avoid `synchronize` (fires on every push) — the review is slow and expensive. Use `labeled` with a `review` label for re-runs after pushing fixes.
+
 ## How it works
 
 ### Pipeline overview
