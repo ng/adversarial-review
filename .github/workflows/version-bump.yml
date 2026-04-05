@@ -1,4 +1,4 @@
-name: Version Bump
+name: Release
 
 on:
   push:
@@ -6,71 +6,62 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  bump:
+  release-please:
     runs-on: ubuntu-latest
-    if: "!startsWith(github.event.head_commit.message, 'chore: bump version')"
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      version: ${{ steps.release.outputs.version }}
+      major: ${{ steps.release.outputs.major }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          release-type: simple
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  update-plugin-version:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          ref: main
 
-      - name: Determine bump type from commit message
-        id: bump
+      - name: Update plugin manifest versions
         run: |
-          MSG=$(git log -1 --pretty=%s)
-          if echo "$MSG" | grep -qiE '^feat!:|^fix!:|^refactor!:|BREAKING CHANGE'; then
-            echo "type=major" >> "$GITHUB_OUTPUT"
-          elif echo "$MSG" | grep -qiE '^feat'; then
-            echo "type=minor" >> "$GITHUB_OUTPUT"
-          elif echo "$MSG" | grep -qiE '^fix|^perf|^refactor'; then
-            echo "type=patch" >> "$GITHUB_OUTPUT"
-          else
-            echo "type=none" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Bump version in plugin files
-        if: steps.bump.outputs.type != 'none'
-        run: |
-          BUMP=${{ steps.bump.outputs.type }}
-          CURRENT=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
-
-          case "$BUMP" in
-            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-            patch) PATCH=$((PATCH + 1)) ;;
-          esac
-
-          NEW="${MAJOR}.${MINOR}.${PATCH}"
-          echo "Bumping $CURRENT → $NEW ($BUMP)"
-
+          VERSION=${{ needs.release-please.outputs.version }}
           python3 -c "
           import json
           for f in ['.claude-plugin/plugin.json', '.claude-plugin/marketplace.json']:
               data = json.load(open(f))
               if 'version' in data:
-                  data['version'] = '$NEW'
+                  data['version'] = '$VERSION'
               if 'plugins' in data:
                   for p in data['plugins']:
                       if 'version' in p:
-                          p['version'] = '$NEW'
+                          p['version'] = '$VERSION'
               json.dump(data, open(f, 'w'), indent=2)
-              # Add trailing newline
               with open(f, 'a') as fh:
                   fh.write('\n')
           "
 
-      - name: Commit and push
-        if: steps.bump.outputs.type != 'none'
+      - name: Commit plugin version update
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          NEW=$(python3 -c "import json; print(json.load(open('.claude-plugin/plugin.json'))['version'])")
           git add .claude-plugin/plugin.json .claude-plugin/marketplace.json
-          git commit -m "chore: bump version to $NEW"
-          git tag "v$NEW"
-          MAJOR=$(echo "$NEW" | cut -d. -f1)
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: sync plugin manifests to v${{ needs.release-please.outputs.version }}"
+          git push
+
+      - name: Move major version tag
+        run: |
+          MAJOR=${{ needs.release-please.outputs.major }}
           git tag -fa "v$MAJOR" -m "v$MAJOR: latest $MAJOR.x release"
-          git push && git push --tags --force
+          git push origin "v$MAJOR" --force
