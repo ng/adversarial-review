@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.4.0](https://github.com/ng/adversarial-review/compare/v1.3.0...v1.4.0) (2026-04-06)
+
+
+### Features
+
+* add GitHub Action for CI integration ([#12](https://github.com/ng/adversarial-review/issues/12)) ([0588a75](https://github.com/ng/adversarial-review/commit/0588a7530d84b4f02e480993d903aa33c77ec18c))
+* auto-move major version tag on release for GHA consumers ([c0af300](https://github.com/ng/adversarial-review/commit/c0af300ab77b927a3f923278ebfd6c6fac4a71da))
+* replace version-bump with release-please, extract changelog ([f01a12c](https://github.com/ng/adversarial-review/commit/f01a12c11b41cd2f3425d941e8a46ae2713a23cb))
+* signal quality gates from OpenAI Codex review prompt ([#13](https://github.com/ng/adversarial-review/issues/13)) ([149f452](https://github.com/ng/adversarial-review/commit/149f452654e77b7de9a0f38be040d0f62e05532d))
+
+
+### Bug Fixes
+
+* default to no-fix mode for CI review-only workflow ([d3fa64c](https://github.com/ng/adversarial-review/commit/d3fa64c85e502021c579f0948395c5a146b405d7))
+* shorten action description to under 125 chars for Marketplace ([47d6450](https://github.com/ng/adversarial-review/commit/47d6450da29291a6f03b95d2516097bb80460aaa))
+
 ## [1.4.0] — Signal quality gates
 
 Signal-to-noise improvements adapted from [OpenAI Codex's review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md).
