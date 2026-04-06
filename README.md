@@ -183,7 +183,7 @@ flowchart TD
 
 | Marker | Severity | Meaning |
 |--------|----------|---------|
-| 🔴 | Critical | Bug that should be fixed before merging |
+| 🔴 | Critical | Universal bug — fires regardless of inputs/environment. Fix before merging |
 | 🟡 | Major | Significant issue, strongly recommend fixing |
 | 🟢 | Minor | Worth fixing but not blocking |
 | ⚪ | Nit | Stylistic or minor improvement |
@@ -236,6 +236,8 @@ Several patterns in this plugin were directly informed by studying Claude Code's
 **Coordinator-only synthesis** — Claude Code's Coordinator Mode restricts the coordinator to only 4 tools (Agent, TaskStop, SendMessage, SyntheticOutput) while workers get the full toolset. This prevents the coordinator from accidentally modifying files during synthesis. We adopted this as explicit read-only constraints during Step 7: the lead can only read reports and write to `.reviews/` during synthesis, with source modifications restricted to the explicit "Apply agreed fixes" sub-step.
 
 **Numeric output anchors** — Claude Code's internal prompts use specific word-count limits ("Keep text between tool calls to ≤25 words") which showed measurable token reduction in A/B testing. We applied this to both agent prompts: Optimizer findings ≤50 words per Problem field, suggested fixes ≤30 words, Skeptic challenges ≤50 words. This reduces verbose reasoning that inflates cost without improving signal.
+
+**Signal gate** — Adapted from [OpenAI Codex's review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md). Every Optimizer finding must pass an 8-point checklist before being written up: it must be actionable, introduced by the PR, not demand rigor absent from the rest of the codebase, not rely on unstated assumptions, and provably identify the affected code path. This reduces false positives — especially speculative "this might break something" findings — and calibrates review strictness to the repo's existing quality bar. The Codex prompt also informed our tightened Critical severity definition (universal issues only, no scenario-dependent triggers), the mandatory Trigger field in findings (forcing reviewers to specify when a bug manifests), and the matter-of-fact tone guidance for PR comments.
 
 **Fix quality anti-patterns** — Claude Code's system prompt explicitly tells the model "Three similar lines of code is better than a premature abstraction" and "Don't add features, refactor code, or make 'improvements' beyond what was asked." We added these as Fix Quality Guardrails in the Optimizer prompt — preventing suggested fixes from over-engineering the solution with unnecessary abstractions, feature flags, or adjacent refactoring.
 

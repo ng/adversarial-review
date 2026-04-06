@@ -413,7 +413,25 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
 
    PLUS any domain-specific lenses from the project's `.claude/docs/code-review.md`.
 
-7. FIX QUALITY GUARDRAILS: When writing suggested fixes, avoid these anti-patterns:
+7. SIGNAL GATE — before writing up any finding, it must pass ALL of these checks.
+   Drop it silently if any check fails, EXCEPT check (d) — pre-existing bugs are
+   routed to 🟣 Pre-existing severity instead of dropped:
+   a. It meaningfully impacts accuracy, performance, security, or maintainability.
+   b. It is discrete and actionable — not a general observation or a bundle of issues.
+   c. Fixing it does not demand a level of rigor absent from the rest of the codebase.
+      (Don't flag missing input validation in a repo where nothing validates input.)
+   d. The issue was introduced in this PR. If it's pre-existing, don't drop it — report
+      it with 🟣 Pre-existing severity instead (see item 10). All other gate checks
+      still apply to pre-existing findings.
+   e. The PR author would likely fix it if made aware. If it's debatable taste, drop it.
+   f. It does not rely on unstated assumptions about the codebase or author's intent.
+   g. You can provably identify the affected code path — speculation that "this might
+      break something elsewhere" is not a finding unless you name the downstream code.
+   h. It is clearly not an intentional change by the author.
+
+   Adapted from [OpenAI Codex review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md).
+
+8. FIX QUALITY GUARDRAILS: When writing suggested fixes, avoid these anti-patterns:
    - Do NOT suggest adding abstractions, helpers, or utilities for a one-time fix
    - Do NOT suggest wrapping things in feature flags or backwards-compatibility shims
    - Do NOT suggest adding error handling for scenarios that cannot occur given the
@@ -422,7 +440,7 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
    - Three similar lines of code is better than a premature abstraction
    - The fix should be the minimum change that resolves the issue correctly
 
-8. Write your findings in this exact format:
+9. Write your findings in this exact format:
 
    # Optimizer Findings ([model]) — [branch]
 
@@ -436,8 +454,11 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
    ### Finding 1: [title]
    - **File**: [path]:[line number]
    - **Severity**: 🔴 Critical | 🟡 Major | 🟢 Minor | ⚪ Nit | 🟣 Pre-existing
+     🔴 Critical = universal breakage that does not depend on any assumptions about inputs.
+     If it requires specific scenarios or environments to trigger, it is 🟡 Major at most.
    - **Category**: [Security | Performance | Correctness | Pattern | Type Safety | Architecture | Testing | Completeness | Deception]
    - **Problem**: [what is wrong]
+   - **Trigger**: [specific scenarios, environments, or inputs required for this to manifest — or "universal" if it always fires]
    - **Suggested fix**: [concrete code change or approach]
    - **Rationale**: [why this matters — cite convention doc if applicable]
 
@@ -452,11 +473,16 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
    - ⚪ Nit: [count]
    - 🟣 Pre-existing: [count]
 
-9. PRE-EXISTING BUGS: If you notice bugs in the surrounding code that were NOT
+   ## Overall Verdict
+   - **Correctness**: patch is correct | patch is incorrect
+   - **Explanation**: [1-3 sentences justifying the verdict — ignore style, formatting,
+     and nits; focus only on whether the patch introduces bugs or breaks existing behavior]
+
+10. PRE-EXISTING BUGS: If you notice bugs in the surrounding code that were NOT
    introduced by this PR, still report them but mark severity as 🟣 Pre-existing.
    These are valuable to surface but are not the PR author's fault.
 
-10. Do NOT commit, push, or modify source files. Report only.
+11. Do NOT commit, push, or modify source files. Report only.
 ```
 
 ### Orchestration — Optimizer phase
@@ -591,6 +617,7 @@ Then, independently review the code for issues The Optimizer missed, especially:
    - **Severity**: 🔴 Critical | 🟡 Major | 🟢 Minor | ⚪ Nit | 🟣 Pre-existing
    - **Category**: [Edge Case | Race Condition | Accessibility | UX | Consistency | Blast Radius | Deception]
    - **Problem**: [what is wrong]
+   - **Trigger**: [specific scenarios, environments, or inputs required — or "universal"]
    - **Suggested fix**: [concrete code change or approach]
 
    ## Statistics
@@ -599,6 +626,11 @@ Then, independently review the code for issues The Optimizer missed, especially:
    - Findings agreed with modifications: [count]
    - Findings where verification unavailable: [count]
    - New issues found: [count]
+
+   ## Overall Verdict
+   - **Correctness**: patch is correct | patch is incorrect
+   - **Explanation**: [1-3 sentences — does the patch break existing behavior or introduce
+     bugs? Ignore style, nits, and findings you already challenged above]
 
 7. Do NOT commit, push, or modify source files. Report only.
 ```
@@ -807,6 +839,8 @@ curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
   -d '{"body":"[finding]","position":{"base_sha":"[base_sha]","start_sha":"[start_sha]","head_sha":"[head_sha]","position_type":"text","new_path":"[file]","new_line":[line]}}' \
   "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"
 ```
+
+**Tone**: Matter-of-fact. Not accusatory, not overly positive. No flattery ("Great job...", "Thanks for..."). The author should immediately grasp the issue without close reading. Communicate severity honestly — don't overclaim impact.
 
 For each finding, format the comment as:
 ```markdown
