@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.4.0] — Signal quality gates
+
+Signal-to-noise improvements adapted from [OpenAI Codex's review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md).
+
+- **Signal gate**: 8-point checklist every Optimizer finding must pass before being written up — actionable, introduced by this PR, calibrated to repo quality, no unstated assumptions, provably affected code identified. Silently drops findings that fail any check
+- **Trigger field**: Findings now require a `Trigger` field specifying the scenarios, environments, or inputs needed for the bug to manifest (or "universal"). Forces reviewers to be concrete about when issues actually fire
+- **Critical severity tightened**: 🔴 Critical is now reserved for universal issues that fire regardless of inputs/environment. Scenario-dependent bugs cap at 🟡 Major
+- **Overall verdict**: Both Optimizer and Skeptic reports now end with a binary "patch is correct / patch is incorrect" verdict with 1-3 sentence justification
+- **Tone guidance**: PR inline comments use matter-of-fact tone — no flattery, no overclaiming severity, immediately graspable by the author
+
 ## [1.3.0](https://github.com/ng/adversarial-review/compare/v1.2.2...v1.3.0) (2026-04-01)
 
 Improvements informed by first-principles patterns from Claude Code's agent orchestration internals.
