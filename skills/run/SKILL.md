@@ -414,12 +414,15 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
    PLUS any domain-specific lenses from the project's `.claude/docs/code-review.md`.
 
 7. SIGNAL GATE — before writing up any finding, it must pass ALL of these checks.
-   Drop it silently if any check fails:
+   Drop it silently if any check fails, EXCEPT check (d) — pre-existing bugs are
+   routed to 🟣 Pre-existing severity instead of dropped:
    a. It meaningfully impacts accuracy, performance, security, or maintainability.
    b. It is discrete and actionable — not a general observation or a bundle of issues.
    c. Fixing it does not demand a level of rigor absent from the rest of the codebase.
       (Don't flag missing input validation in a repo where nothing validates input.)
-   d. The issue was introduced in this PR — pre-existing bugs use 🟣 Pre-existing instead.
+   d. The issue was introduced in this PR. If it's pre-existing, don't drop it — report
+      it with 🟣 Pre-existing severity instead (see item 10). All other gate checks
+      still apply to pre-existing findings.
    e. The PR author would likely fix it if made aware. If it's debatable taste, drop it.
    f. It does not rely on unstated assumptions about the codebase or author's intent.
    g. You can provably identify the affected code path — speculation that "this might
