@@ -15,9 +15,9 @@ inputs:
     required: false
     default: '${{ github.event.pull_request.number }}'
   mode:
-    description: 'Review mode: "auto-fix" (default) applies consensus fixes, "no-fix" reports only.'
+    description: 'Review mode: "no-fix" (default) reports only, "auto-fix" applies consensus fixes.'
     required: false
-    default: 'auto-fix'
+    default: 'no-fix'
   allowed_tools:
     description: 'Additional allowed tools (comma-separated). git, gh, and common build tools are included by default.'
     required: false
