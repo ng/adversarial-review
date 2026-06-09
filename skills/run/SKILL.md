@@ -59,11 +59,12 @@ Run in parallel:
    - If remote URL contains `github.com` → `[platform]` = `github`
    - If remote URL contains `gitlab` or is not `github.com` → `[platform]` = `gitlab`
    - For GitLab, extract `[gitlab_url]` (e.g., `https://gitlab.example.com`) and resolve project ID:
-     `curl --header "PRIVATE-TOKEN: $GITLAB_PAT" "$GITLAB_URL/api/v4/projects?search=[repo]"` → store as `[project_id]`
-   - Token lookup order: `$GITLAB_PAT` → `$GITLAB_ORG_PAT` → error with instructions
+     `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects?search=[repo]"` → store as `[project_id]`
+   - Token lookup order: `$GITLAB_PAT` → `$GITLAB_ORG_PAT` → `$GITLAB_TOKEN` → `$CI_JOB_TOKEN` → error with instructions. Store the resolved value as `$TOKEN`.
+   - Auth header: use `PRIVATE-TOKEN` for `$GITLAB_PAT`/`$GITLAB_ORG_PAT`/`$GITLAB_TOKEN`, use `JOB-TOKEN` for `$CI_JOB_TOKEN`. Store the matching header name as `$TOKEN_HEADER` and pass it as `--header "$TOKEN_HEADER: $TOKEN"` on every GitLab API call below.
 3. Detect base branch:
    - GitHub: try `gh pr view --json baseRefName -q .baseRefName 2>/dev/null`
-   - GitLab: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests?source_branch=[branch]&state=opened" | jq -r '.[0].target_branch'`
+   - GitLab: `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests?source_branch=[branch]&state=opened" | jq -r '.[0].target_branch'`
    - Fallback: check if `origin/develop` exists (`git rev-parse --verify origin/develop 2>/dev/null`) — use `develop` if it exists, otherwise `main`. Store as `[base]`.
 
 Then:
@@ -84,10 +85,10 @@ Try to detect or use the provided PR number. If a PR/MR exists:
 3. Check CI status: `gh pr checks <number>`
 
 **GitLab (`[platform]` = `gitlab`):**
-1. Get MR metadata: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]"`
-2. Get all MR notes (comments): `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/notes"`
-3. Get MR discussions (inline review threads): `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"`
-4. Check pipeline status: `curl --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/pipelines"`
+1. Get MR metadata: `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]"`
+2. Get all MR notes (comments): `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/notes"`
+3. Get MR discussions (inline review threads): `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"`
+4. Check pipeline status: `curl --header "$TOKEN_HEADER: $TOKEN" "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/pipelines"`
 
 **Then (both platforms):**
 4. Parse and deduplicate feedback into actionable items with file, line, description
@@ -828,13 +829,13 @@ gh api repos/[owner]/[repo]/pulls/[number]/reviews --method POST \
 **GitLab (`[platform]` = `gitlab`):**
 ```bash
 # Post summary note on MR
-curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+curl -X POST --header "$TOKEN_HEADER: $TOKEN" \
   --header "Content-Type: application/json" \
   -d '{"body":"[summary comment]"}' \
   "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/notes"
 
 # Post inline discussion on specific lines
-curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+curl -X POST --header "$TOKEN_HEADER: $TOKEN" \
   --header "Content-Type: application/json" \
   -d '{"body":"[finding]","position":{"base_sha":"[base_sha]","start_sha":"[start_sha]","head_sha":"[head_sha]","position_type":"text","new_path":"[file]","new_line":[line]}}' \
   "$GITLAB_URL/api/v4/projects/[project_id]/merge_requests/[iid]/discussions"
@@ -921,7 +922,7 @@ ISSUE
 
 **GitLab (`[platform]` = `gitlab`):**
 ```bash
-curl -X POST --header "PRIVATE-TOKEN: $TOKEN" \
+curl -X POST --header "$TOKEN_HEADER: $TOKEN" \
   --header "Content-Type: application/json" \
   -d "$(cat <<'ISSUE'
 {
