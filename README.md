@@ -174,7 +174,7 @@ flowchart TD
 3. **Triage feedback** — fix now, note for report, or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
-6. **Adversarial review** — change-type classification, weighted escalation scoring, then standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies
+6. **Adversarial review** — change-type classification, weighted escalation scoring, then standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies. Reviewers run as background agents — follow along live in the agents view (`← for agents`), or watch reports land in `.reviews/<branch_safe>/`
 7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
 8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
 9. **File issues** — offered after report: deferred, disputed, and pre-existing items filed with full review context

@@ -260,6 +260,8 @@ TaskUpdate({ taskId: "2", addBlockedBy: ["1"] })
 
 Spawn all teammates in a single message. They check TaskList, claim unblocked tasks, and work. Teammates with blocked tasks idle until the lead wakes them after completing the merge.
 
+**Following along live**: teammates run as background agents inside Claude Code, not in tmux panes. To watch a reviewer's output while the review runs, open the built-in agents view (the `← for agents` hint in the status line), select a teammate with `↑/↓`, and press `Enter`. Each teammate also writes its findings to `.reviews/[branch_safe]/` as it goes, so progress is inspectable on disk too. No tmux or separate processes are involved.
+
 **Do NOT use `isolation: "worktree"`** — agents in worktrees cannot write to the main repo's `.reviews/` directory without permission prompts. All agents run in the main repo directory.
 
 **Full depth** — 4 teammates in one message:
