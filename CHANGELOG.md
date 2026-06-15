@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0](https://github.com/ng/adversarial-review/compare/v1.4.0...v1.5.0) (2026-06-15)
+
+
+### Features
+
+* signal quality gates from OpenAI Codex review prompt ([#13](https://github.com/ng/adversarial-review/issues/13)) ([149f452](https://github.com/ng/adversarial-review/commit/149f452654e77b7de9a0f38be040d0f62e05532d))
+
+
+### Bug Fixes
+
+* let release-please bump plugin manifests directly ([#17](https://github.com/ng/adversarial-review/issues/17)) ([f30d9b3](https://github.com/ng/adversarial-review/commit/f30d9b3a9cbd100abe4bdbd68d9aef1286dc626c))
+* support GitLab CI_JOB_TOKEN auth in review command ([#19](https://github.com/ng/adversarial-review/issues/19)) ([a2d2a3e](https://github.com/ng/adversarial-review/commit/a2d2a3e004659b8ed1b637c6ebcbb803453b587a))
+
 ## [1.4.0](https://github.com/ng/adversarial-review/compare/v1.3.0...v1.4.0) (2026-04-06)
 
 
