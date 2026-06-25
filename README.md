@@ -25,7 +25,23 @@ To update to the latest version, re-run both commands.
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
 /adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor reviewer
 ```
+
+### Cross-vendor diversity (`--with-codex`)
+
+By default every reviewer is a Claude model (Sonnet + Opus), which share blind spots.
+Pass `--with-codex` to add an OpenAI Codex reviewer as a Bash sidecar alongside the
+Claude teammates — it writes the same report files the merge step reads, so it's a
+first-class reviewer. A finding both vendors independently flag is almost certainly
+real; a finding only Codex raises is blind-spot coverage one vendor can't give you.
+
+Requires the [`codex` CLI](https://github.com/openai/codex) installed and
+authenticated via `codex login` (ChatGPT SSO — no API key needed). If Codex is
+unavailable the review proceeds Claude-only with a note; the sidecar can only add
+coverage, never block a review. The Codex reviewer runs in a `read-only` sandbox,
+which structurally enforces the report-only constraint. Local CLI only for now — the
+GitHub Action runs Claude-only.
 
 ## GitHub Action
 

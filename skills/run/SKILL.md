@@ -11,7 +11,17 @@ Review all code changes on the current branch that have not been merged yet.
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
 /adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor reviewer
 ```
+
+**Cross-vendor diversity (`--with-codex`):** By default all reviewers are Claude
+models (Sonnet + Opus), which share blind spots. Passing `--with-codex` adds an
+OpenAI Codex reviewer as a Bash sidecar alongside the Claude teammates — a bug that
+Claude *and* Codex independently flag is almost certainly real, and a finding only
+Codex surfaces is exactly the blind-spot coverage you can't get from one vendor.
+Requires the `codex` CLI installed and authenticated (`codex login` via ChatGPT
+SSO — no API key needed). If Codex is unavailable, the review proceeds Claude-only
+with a note; the sidecar can only add coverage, never block a review.
 
 ## Review artifacts
 
@@ -21,9 +31,11 @@ All agent reports are saved to `.reviews/[branch_safe]/` in the project director
 .reviews/[branch_safe]/
 ├── optimizer-sonnet.md      # Sonnet Optimizer findings
 ├── optimizer-opus.md        # Opus Optimizer findings (full depth only)
+├── optimizer-codex.md       # Codex Optimizer findings (--with-codex only)
 ├── optimizer-merged.md      # Merged Optimizer report
 ├── skeptic-sonnet.md        # Sonnet Skeptic challenges
 ├── skeptic-opus.md          # Opus Skeptic challenges (full depth only)
+├── skeptic-codex.md         # Codex Skeptic challenges (--with-codex only)
 ├── skeptic-merged.md        # Merged Skeptic report
 └── summary.md               # Persistent review summary (the artifact of record)
 ```
@@ -39,8 +51,16 @@ The `summary.md` is the **review artifact of record** — it captures the full o
 Parse `$ARGUMENTS` for:
 - A PR number (any bare number like `405`)
 - `--no-fix` flag to disable auto-fix mode
+- `--with-codex` flag to add an OpenAI Codex reviewer
 
 If `--no-fix` is present, set `[mode]` to `review-only`. Otherwise, set `[mode]` to `auto-fix` (default).
+
+If `--with-codex` is present, set `[use_codex]` to `true`. Otherwise `false`. When
+`true`, before spawning reviewers, confirm the CLI is available and authenticated:
+`codex --version` (installed?) and `codex login status` (authenticated via ChatGPT
+SSO?). If either fails, set `[use_codex]` back to `false` and note in the report:
+"Codex reviewer requested but unavailable ([reason]) — proceeded Claude-only." Never
+block the review on Codex.
 
 If no PR number is provided, auto-detect via `gh pr view --json number`.
 
@@ -320,6 +340,12 @@ Agent({
 
 **Standard depth** — 2 teammates:
 
+> **Report-file naming with `--with-codex`:** the filenames below assume Codex is
+> off. When `[use_codex]` is `true`, the Claude teammates must write to
+> `optimizer-sonnet.md` / `skeptic-sonnet.md` instead of `*-merged.md` — otherwise
+> the merge step would read and overwrite its own output. Substitute the `-sonnet`
+> filenames in both prompts below when Codex is active.
+
 ```javascript
 Agent({
   name: "optimizer-sonnet",
@@ -330,7 +356,7 @@ Agent({
   prompt: `You are "The Optimizer" on team "review-[branch_safe]".
   Check TaskList, claim your task with TaskUpdate({ taskId: <id>, status: "in_progress" }), and when done, verify your report file is non-empty, then call TaskUpdate({ taskId: <id>, status: "completed" }).
   [OPTIMIZER_PROMPT — see below]
-  Write findings to .reviews/[branch_safe]/optimizer-merged.md`
+  Write findings to .reviews/[branch_safe]/optimizer-merged.md   (use optimizer-sonnet.md if [use_codex])`
 })
 
 Agent({
@@ -343,9 +369,54 @@ Agent({
   Your task is blocked — wait for the lead to message you when the Optimizer report is ready.
   Then check TaskList, claim your task, and mark it completed when done.
   [SKEPTIC_PROMPT — see below]
-  Write challenge report to .reviews/[branch_safe]/skeptic-merged.md`
+  Write challenge report to .reviews/[branch_safe]/skeptic-merged.md   (use skeptic-sonnet.md if [use_codex])`
 })
 ```
+
+### Codex sidecar reviewer (`--with-codex` only)
+
+Skip this section unless `[use_codex]` is `true`. The Codex reviewer is NOT a Teams
+teammate — it cannot be spawned with the `Agent` tool or participate in the task
+graph. It runs as a Bash sidecar that writes the same report files the merge step
+already reads, so it is a first-class reviewer to everything downstream.
+
+It runs at **standard and full depth** (any depth that runs LLM reviewers at all).
+At standard depth it gives you Sonnet + Codex — real cross-vendor diversity for the
+cost of one extra reviewer.
+
+**Adapt the prompts for Codex.** Codex is not in the Teams task graph and follows
+format instructions less rigidly than Claude, so for each prompt:
+- Drop the task-protocol wrapper lines (`Check TaskList`, `claim ... TaskUpdate(...)`,
+  `mark it completed`). Codex has no tasks to claim.
+- Substitute the template variables (`[base]`, `[branch]`, `[branch_safe]`,
+  `[change_types]`) exactly as for the Claude agents.
+- Append this footer verbatim: `Output ONLY the report markdown in the exact format
+  specified above. No preamble, no commentary before or after the report.`
+
+Write each adapted prompt to a temp file, then run Codex non-interactively. Use the
+`read-only` sandbox — it structurally enforces the "do NOT modify source files"
+constraint that the Claude agents only get from the prompt:
+
+```bash
+# Phase 1 — Optimizer (run in parallel with the Claude Optimizer teammates).
+# Launch in the background so the Claude agents review concurrently.
+codex exec \
+  --cd "[repo_root]" \
+  --sandbox read-only \
+  --skip-git-repo-check \
+  "$(cat /tmp/codex-optimizer-prompt.txt)" \
+  > "[repo_root]/.reviews/[branch_safe]/optimizer-codex.md" \
+  2> "[repo_root]/.reviews/[branch_safe]/optimizer-codex.err"
+```
+
+The Codex Skeptic runs in **Phase 2**, after the Optimizer merge exists — see the
+Skeptic orchestration step. Do not launch it up front: its prompt reads
+`optimizer-merged.md`, which does not exist until the lead writes it. Codex reads
+that file itself from disk, so unlike the Claude Skeptics it needs no wake-up message.
+
+**If a `codex exec` call exits non-zero or produces an empty report:** note it in the
+report ("Codex Optimizer/Skeptic unavailable — [first line of .err]") and continue
+with the Claude reviewers. The sidecar can only add coverage, never block the review.
 
 ### Pass 1 — The Optimizer
 
@@ -492,12 +563,14 @@ BREVITY: Keep reasoning between findings to ≤25 words. Each finding's Problem 
 
 Optimizer teammates auto-claim their tasks and begin reviewing immediately. The lead waits for idle notifications.
 
-1. **Wait for Optimizer teammates** — they send idle notifications when their tasks are complete
-2. **Lead handles Optimizer merge** (full depth only):
-   - Read `[repo_root]/.reviews/[branch_safe]/optimizer-sonnet.md` and `optimizer-opus.md`
-   - Deduplicate findings that both models flagged (these are high-confidence issues)
-   - Write merged report to `[repo_root]/.reviews/[branch_safe]/optimizer-merged.md` noting which findings came from which model
+1. **Wait for Optimizer teammates** — they send idle notifications when their tasks are complete. **If `[use_codex]`**, also wait for the background `codex exec` Optimizer call to return (its report file stops growing / the process exits).
+2. **Lead handles Optimizer merge** (full depth, OR any depth when `[use_codex]` added a second reviewer):
+   - Read every `optimizer-*.md` report that exists: `optimizer-sonnet.md`, `optimizer-opus.md` (full depth), and `optimizer-codex.md` (`--with-codex`)
+   - Deduplicate findings that multiple reviewers flagged. Agreement **across vendors** (Claude + Codex) is a stronger signal than agreement between two Claude models — treat a finding flagged by both a Claude model and Codex as high-confidence
+   - Write merged report to `[repo_root]/.reviews/[branch_safe]/optimizer-merged.md` noting which reviewer(s) flagged each finding (sonnet / opus / codex)
    - Mark merge task completed: `TaskUpdate({ taskId: "3", status: "completed" })`
+
+   **Standard depth without Codex** has a single Optimizer report and needs no merge (its report IS the merged report). **Standard depth WITH Codex** has two reports (sonnet + codex) — perform the merge above and write `optimizer-merged.md`.
 3. **Wake Skeptic teammates** — their tasks are now unblocked:
    ```javascript
    // Both depths — always wake the Sonnet Skeptic:
@@ -514,7 +587,18 @@ Optimizer teammates auto-claim their tasks and begin reviewing immediately. The 
    })
    ```
 
-   **Standard depth**: There is no merge step — the Optimizer's single report IS the merged report. After the Optimizer teammate completes, immediately wake the Skeptic with the SendMessage above.
+   **Standard depth**: With no Codex, there is no merge step — the Optimizer's single report IS the merged report; after the Optimizer teammate completes, immediately wake the Skeptic with the SendMessage above. With `--with-codex`, first merge the sonnet + codex Optimizer reports into `optimizer-merged.md` (per step 2), then wake the Skeptic.
+
+   **If `[use_codex]`**, now launch the Phase 2 Codex Skeptic in the background (it reads the `optimizer-merged.md` you just wrote):
+   ```bash
+   codex exec \
+     --cd "[repo_root]" \
+     --sandbox read-only \
+     --skip-git-repo-check \
+     "$(cat /tmp/codex-skeptic-prompt.txt)" \
+     > "[repo_root]/.reviews/[branch_safe]/skeptic-codex.md" \
+     2> "[repo_root]/.reviews/[branch_safe]/skeptic-codex.err"
+   ```
 
 ### Pass 2 — The Skeptic
 
@@ -640,10 +724,10 @@ Then, independently review the code for issues The Optimizer missed, especially:
 
 ### Orchestration — Skeptic phase
 
-1. **Wait for Skeptic teammates** — they send idle notifications when their tasks are complete
-2. **Lead handles Skeptic merge** (full depth only):
-   - Read `[repo_root]/.reviews/[branch_safe]/skeptic-sonnet.md` and `skeptic-opus.md`
-   - For each Optimizer finding: note where both Skeptics agree vs disagree (cross-model consensus strengthens the signal)
+1. **Wait for Skeptic teammates** — they send idle notifications when their tasks are complete. **If `[use_codex]`**, also wait for the background `codex exec` Skeptic call to return.
+2. **Lead handles Skeptic merge** (full depth, OR any depth when `[use_codex]` added a second Skeptic):
+   - Read every `skeptic-*.md` report that exists: `skeptic-sonnet.md`, `skeptic-opus.md` (full depth), and `skeptic-codex.md` (`--with-codex`)
+   - For each Optimizer finding: note where the Skeptics agree vs disagree. Cross-vendor consensus (a Claude Skeptic and Codex both reaching the same verdict) is the strongest confidence signal
    - Write merged report to `[repo_root]/.reviews/[branch_safe]/skeptic-merged.md`
    - Mark merge task completed: `TaskUpdate({ taskId: "6", status: "completed" })`
 3. **Shutdown the team**:
@@ -672,10 +756,15 @@ Use model agreement to gauge confidence (full depth only — for standard depth,
 
 | Signal | Meaning |
 |--------|---------|
+| Flagged by both vendors (a Claude model **and** Codex) + Skeptics agree | Very high confidence — cross-vendor consensus beats same-vendor agreement |
 | Both Optimizer models flagged it + both Skeptic models agree | Very high confidence |
 | One Optimizer model flagged it + both Skeptic models agree | High confidence |
 | Both Optimizer models flagged it + Skeptic models disagree | Disputed — present to user |
 | Only one model flagged + only one Skeptic agrees | Low confidence — note only |
+
+When `--with-codex` is active, weight cross-vendor agreement above same-vendor
+agreement: Claude and Codex share fewer blind spots than Sonnet and Opus do, so a
+finding both vendors independently raised is the highest-confidence signal available.
 
 ### Confidence-based filtering
 
