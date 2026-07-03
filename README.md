@@ -106,7 +106,7 @@ sidecar. Explicit flags always win — `--no-codex` forces a Claude-only run, `-
 $adversarial-review                  # auto-fix (default), auto-detect PR
 $adversarial-review 405              # auto-fix, specific PR
 $adversarial-review --no-fix         # review only, no code modifications
-$adversarial-review --paths "src/api/**"  # review only branch changes under these paths
+$adversarial-review --paths "src/api/**,src/auth/**"  # review only branch changes under these paths
 $adversarial-review --compare-claude # compare Codex findings with Claude artifacts
 ```
 
