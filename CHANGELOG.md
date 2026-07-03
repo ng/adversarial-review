@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+- **Flag defaults via config**: `~/.claude/adversarial-review.json` (user-wide) and `.claude/adversarial-review.json` (per repo) can set `"with-codex": true` and/or a default `mode`, so cross-vendor review can be the default instead of a per-run flag. Explicit flags (`--with-codex`/`--no-codex`, `--no-fix`/`--fix`) always override config.
+- **`--with-codex` cross-vendor sidecar**: Opt-in flag adds an OpenAI Codex reviewer to the Claude review as a read-only `codex exec` background sidecar writing `optimizer-codex.md` / `skeptic-codex.md`, merged into the same synthesis with cross-vendor agreement weighted above same-vendor. Soft-fails to Claude-only when the `codex` CLI is missing or unauthenticated. (Re-implements PR #21 on the two-wave orchestration.)
+- **Codex cross-review support**: Added Codex plugin packaging, a Codex-native `$adversarial-review` skill, and repo marketplace metadata so Codex can run an independent review lane.
+- **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
+- **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
+
+## [1.5.0](https://github.com/ng/adversarial-review/compare/v1.4.0...v1.5.0) (2026-07-03)
+
+
+### Features
+
+* add Codex cross-review support with --with-codex sidecar and flag defaults ([#22](https://github.com/ng/adversarial-review/issues/22)) ([dee9294](https://github.com/ng/adversarial-review/commit/dee929425409079ed1c5ab7081a3a1482b35d2a3))
+* signal quality gates from OpenAI Codex review prompt ([#13](https://github.com/ng/adversarial-review/issues/13)) ([149f452](https://github.com/ng/adversarial-review/commit/149f452654e77b7de9a0f38be040d0f62e05532d))
+
+
+### Bug Fixes
+
+* let release-please bump plugin manifests directly ([#17](https://github.com/ng/adversarial-review/issues/17)) ([f30d9b3](https://github.com/ng/adversarial-review/commit/f30d9b3a9cbd100abe4bdbd68d9aef1286dc626c))
+* support GitLab CI_JOB_TOKEN auth in review command ([#19](https://github.com/ng/adversarial-review/issues/19)) ([a2d2a3e](https://github.com/ng/adversarial-review/commit/a2d2a3e004659b8ed1b637c6ebcbb803453b587a))
+
 ## [1.4.0](https://github.com/ng/adversarial-review/compare/v1.3.0...v1.4.0) (2026-04-06)
 
 

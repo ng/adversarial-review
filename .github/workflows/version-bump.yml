@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
@@ -17,21 +18,75 @@ jobs:
       version: ${{ steps.release.outputs.version }}
       major: ${{ steps.release.outputs.major }}
     steps:
+      - name: Create release app token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@v4
         id: release
         with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
           release-type: simple
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+  enable-release-pr-automerge:
+    needs: release-please
+    if: needs.release-please.outputs.release_created != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Create release app token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Enable auto-merge for release PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
+        run: |
+          PR_URL="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --label "autorelease: pending" \
+            --json url \
+            --jq '.[0].url')"
+          if [ -z "$PR_URL" ]; then
+            echo "No pending release PR found."
+            exit 0
+          fi
+          gh pr merge "$PR_URL" --repo "$GITHUB_REPOSITORY" --auto --squash --delete-branch
 
   move-major-tag:
     needs: release-please
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
+      - name: Create release app token
+        id: app-token
+        if: ${{ vars.RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ vars.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token || github.token }}
 
       - name: Move major version tag
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || github.token }}
         run: |
           MAJOR=${{ needs.release-please.outputs.major }}
           git tag -fa "v$MAJOR" -m "v$MAJOR: latest $MAJOR.x release"

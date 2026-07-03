@@ -14,5 +14,5 @@
     "security",
     "quality"
   ],
-  "skills": "./skills/"
+  "skills": "./claude/skills/"
 }
