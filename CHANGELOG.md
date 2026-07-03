@@ -8,6 +8,19 @@
 - **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
 - **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
 
+## [1.6.0](https://github.com/ng/adversarial-review/compare/v1.5.0...v1.6.0) (2026-07-03)
+
+
+### Features
+
+* drive the full Codex lane from the Claude plugin and default Codex on when available ([#27](https://github.com/ng/adversarial-review/issues/27)) ([8ed4583](https://github.com/ng/adversarial-review/commit/8ed4583813a946f30f401804a15a5b670be6e53e))
+
+
+### Bug Fixes
+
+* grant release app issue comment permission ([#25](https://github.com/ng/adversarial-review/issues/25)) ([81f1d62](https://github.com/ng/adversarial-review/commit/81f1d62bbbdd1882b7cdbea6b8ed57062cae7ed9))
+* let release-please read its config file so extra-files version bumps apply ([#29](https://github.com/ng/adversarial-review/issues/29)) ([290d046](https://github.com/ng/adversarial-review/commit/290d0460757fddb49ae63092912d3a9d36073fd9))
+
 ## [1.5.0](https://github.com/ng/adversarial-review/compare/v1.4.0...v1.5.0) (2026-07-03)
 
 

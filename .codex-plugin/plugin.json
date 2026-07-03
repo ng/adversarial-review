@@ -1,6 +1,6 @@
 {
   "name": "adversarial-review",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "Adversarial code review workflows for Claude Code and Codex, with Optimizer/Skeptic review passes and mechanical verification.",
   "author": {
     "name": "ng",
