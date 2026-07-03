@@ -25,6 +25,15 @@ Arguments:
 
 Codex is not a drop-in `model: "codex"` value for Claude Code's Agent tool. For true cross-provider review, run Claude and Codex as separate reviewer lanes that write comparable artifacts, then synthesize agreement and disagreement from those artifacts.
 
+## Driven from Claude Code (`--codex-lane`)
+
+The Claude Code plugin's `/adversarial-review:run --codex-lane` runs this workflow headlessly via `codex exec`, one invocation per pass, each prefixed with a phase preamble. When a preamble says you are the Codex lane of a cross-provider review orchestrated from Claude Code:
+
+- Run only the phase it names (Optimizer or Skeptic) at the depth it gives. Skip context gathering, mechanical checks, depth computation, synthesis, auto-fix, and PR/MR commenting — the orchestrating lead owns those.
+- Reuse `.reviews/<branch_safe>/mechanical.txt` as suite-level mechanical evidence; run only targeted commands.
+- In the Skeptic phase, treat the Claude lane's `optimizer-merged.md` exactly like `--compare-claude` artifacts: confirm, dispute, or modify each finding, and report missed issues.
+- Never modify source files; write only `.reviews/` artifacts. If subagents are unavailable, perform the pass yourself in one shot and write the standard-depth artifact.
+
 ## Workflow
 
 1. Parse arguments and set `[mode]` to `auto-fix` unless `--no-fix` is present.
