@@ -163,7 +163,7 @@ Before spending LLM tokens, run free mechanical checks to catch obvious issues. 
 | Build | `pnpm build`, `go build ./...`, `cargo build` | Compilation errors, SSR issues, missing deps |
 | Tests | `pnpm test`, `pytest`, `go test ./...`, `cargo test` | Regressions, broken contracts |
 
-Run all available checks in parallel. Persist the raw output: `mkdir -p [repo_root]/.reviews/[branch_safe]` and write the combined command output (including passing runs) to `[repo_root]/.reviews/[branch_safe]/mechanical.txt`. Skeptic agents later cite this file as evidence for suite-level claims instead of re-running the full suite in a shared checkout.
+Run all available checks in parallel, EXCEPT steps that contend for shared state — build and test tooling that shares caches, lockfiles, or dev-server ports should run sequentially (build before test), for the same shared-checkout reason the Skeptics avoid concurrent full suites. Persist the raw output: `mkdir -p [repo_root]/.reviews/[branch_safe]` and write the combined command output (including passing runs) to `[repo_root]/.reviews/[branch_safe]/mechanical.txt`. Skeptic agents later cite this file as evidence for suite-level claims instead of re-running the full suite in a shared checkout.
 
 Collect failures as **mechanical findings**:
 
@@ -245,7 +245,7 @@ For **standard depth**, use the same pipeline but with 2 reviewer agents (one pe
 
 Ensure the shared report directory exists: `mkdir -p [repo_root]/.reviews/[branch_safe]`
 
-**Variable substitution**: When constructing Agent prompts below, replace all template variables with actual values from Steps 1 and 6: `[repo_root]`, `[branch]`, `[branch_safe]`, `[base]`, `[platform]`, `[change_types]` (plus `[gitlab_url]` and `[project_id]` when `[platform]` is `gitlab`). Replace `[OPTIMIZER_PROMPT — see below]` with the full OPTIMIZER_PROMPT text from the "Pass 1" section, and `[SKEPTIC_PROMPT — see below]` with the full SKEPTIC_PROMPT text from the "Pass 2" section.
+**Variable substitution**: When constructing Agent prompts below, replace all template variables with actual values from Steps 0, 1, and 6: `[mode]`, `[use_codex]`, `[repo_root]`, `[branch]`, `[branch_safe]`, `[base]`, `[platform]`, `[change_types]` (plus `[gitlab_url]` and `[project_id]` when `[platform]` is `gitlab`). Replace `[OPTIMIZER_PROMPT — see below]` with the full OPTIMIZER_PROMPT text from the "Pass 1" section, and `[SKEPTIC_PROMPT — see below]` with the full SKEPTIC_PROMPT text from the "Pass 2" section. Resolve the report-filename parentheticals (e.g. "use optimizer-sonnet.md when [use_codex]") to a single concrete path before spawning — a spawned prompt must never contain an unresolved placeholder or conditional.
 
 **Sequencing**: Agents are spawned in two waves — Optimizers first, Skeptics only after `optimizer-merged.md` is on disk. Each agent gets its complete assignment in its prompt, works, and finishes; the Agent tool's completion notifications tell the lead when a wave is done. No task lists, wake messages, or shutdown protocol are needed.
 
@@ -348,7 +348,11 @@ codex exec \
 **Completion signal**: wait for the background Bash task to exit — the tool notifies
 the lead when the process finishes, exactly like an Agent completion notification.
 Do NOT infer completion by watching the report file stop growing — a stalled
-process's partial report would be merged as if it were complete.
+process's partial report would be merged as if it were complete. **Bound the wait**:
+if the sidecar has not exited within ~10 minutes of the Claude agents in its wave
+finishing, kill the background task and follow the missing-report fallback ("Codex
+Optimizer/Skeptic unavailable — timeout"). A hung sidecar must never stall the
+review. This bound applies to both the Optimizer and Skeptic sidecar waits.
 
 The Codex Skeptic runs in **Phase 2**, launched alongside the Claude Skeptic wave —
 see "Orchestration — Optimizer phase" below. Do not launch it up front: its prompt
@@ -786,6 +790,7 @@ Before resolving findings, apply confidence filters to Skeptic verdicts:
 | ✅ Agree | 50-74 | Confirmed — lower confidence. Goes to "Lower Confidence Items" in the report; NEVER auto-fixed |
 | ✅ Agree | < 50 | Downgrade to "Low confidence — note only" |
 | ⚠️ Disagree | 75-100 | Strong disagreement — present as Disputed |
+| ⚠️ Disagree | 50-74 | Disagreement — present as Disputed |
 | ⚠️ Disagree | < 50 | Weak disagreement — treat as "Disputed" rather than rejected |
 | 🔄 Modified | any | Treat as ✅ Agree at the stated confidence, using the modified suggestion |
 | 🚫 Cannot verify | any (capped 40) | Treat as "Lower Confidence Items" — surfaced but not auto-fixed |
@@ -928,10 +933,15 @@ If a PR/MR exists, post findings as inline comments on the specific lines where 
 `gh api --field` cannot send JSON objects (it would submit each comment as a string and the endpoint 422s), so build the full JSON payload with jq and POST it via `--input`:
 
 ```bash
-# One {path, line, side, body} object per finding:
-COMMENTS_JSON=$(jq -n '[
-  { "path": "[file]", "line": [line], "side": "RIGHT", "body": "[finding]" }
-]')
+# One {path, line, side, body} object per finding — pass finding text as jq
+# arguments, never interpolated into the jq program (bodies contain quotes,
+# backticks, and code that would break the filter syntax):
+COMMENTS_JSON=$(jq -n \
+  --arg path "[file]" \
+  --argjson line [line] \
+  --arg body "[finding]" \
+  '[{path: $path, line: $line, side: "RIGHT", body: $body}]')
+# For multiple findings, build one object per finding this way and merge with `jq -s 'add'`.
 
 jq -n --arg body "[summary comment]" --argjson comments "$COMMENTS_JSON" \
   '{event: "COMMENT", body: $body, comments: $comments}' \

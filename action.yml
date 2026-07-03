@@ -37,8 +37,10 @@ runs:
         plugin_marketplaces: 'https://github.com/ng/adversarial-review.git'
         plugins: 'adversarial-review@adversarial-review'
         # Fail safe: only an explicit "auto-fix" enables code modification; any other
-        # value (typos, "review-only", ...) runs with --no-fix.
-        prompt: '/adversarial-review:run ${{ inputs.mode == ''auto-fix'' && '''' || ''--no-fix'' }} ${{ inputs.pr_number }}'
+        # value (typos, "review-only", ...) runs with --no-fix. The condition must be
+        # the != form: in `a && '' || b` the empty string is falsy, so the || branch
+        # would fire even when a is true.
+        prompt: '/adversarial-review:run ${{ inputs.mode != ''auto-fix'' && ''--no-fix'' || '''' }} ${{ inputs.pr_number }}'
         # claude-code-action v1 removed the allowed_tools/model inputs — both are passed
         # through claude_args instead.
         claude_args: >-

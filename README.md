@@ -144,7 +144,9 @@ jobs:
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
           prompt: "Read skills/codex-review/SKILL.md, then run that workflow in --no-fix mode for PR ${{ github.event.pull_request.number }}."
-          sandbox: read-only
+          # workspace-write: the skill writes .reviews/ artifacts and mechanical.txt;
+          # a read-only sandbox would fail the run. Job permissions stay contents: read.
+          sandbox: workspace-write
 ```
 
 For cross-provider review in CI, run the Claude job and the Codex job as separate jobs and upload `.reviews/` as artifacts from each lane before a synthesis step.
