@@ -24,6 +24,8 @@ To update to the latest version, re-run both commands.
 
 Codex support is packaged through `.codex-plugin/plugin.json` and the `$adversarial-review` skill.
 
+Requires Codex CLI **v0.142.0 or newer** — earlier versions reject the repo-root marketplace path (`"path": "./"`) with `local plugin source path must not be empty` ([openai/codex#17066](https://github.com/openai/codex/issues/17066), fixed in [openai/codex#28771](https://github.com/openai/codex/pull/28771)).
+
 ```
 codex plugin marketplace add ng/adversarial-review
 ```

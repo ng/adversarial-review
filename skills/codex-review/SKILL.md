@@ -53,16 +53,16 @@ Codex is not a drop-in `model: "codex"` value for Claude Code's Agent tool. For 
 When this skill is explicitly invoked, spawn Codex subagents and wait for their results.
 
 Standard depth:
-- Spawn one Optimizer subagent using `gpt-5.5` with high reasoning.
-- After `.reviews/[branch_safe]/optimizer-codex.md` exists, spawn one Skeptic subagent using `gpt-5.5` with high reasoning.
+- Spawn one Optimizer subagent using `gpt-5.5` with high reasoning; it writes `.reviews/[branch_safe]/optimizer-codex.md`.
+- After `.reviews/[branch_safe]/optimizer-codex.md` exists, spawn one Skeptic subagent using `gpt-5.5` with high reasoning; it writes `.reviews/[branch_safe]/skeptic-codex.md`.
 
 Full depth:
 - Spawn two Optimizer subagents in parallel:
-  - `optimizer-codex-full`: use `gpt-5.5` with high reasoning; read the full changed files before judging each hunk.
-  - `optimizer-codex-diff`: use `gpt-5.4-mini` with medium reasoning; review from diff hunks first, reading surrounding code only when needed.
-- Merge their reports into `.reviews/[branch_safe]/optimizer-codex-merged.md`.
-- Spawn two Skeptic subagents in parallel with the same diff/full context split.
-- Merge their reports into `.reviews/[branch_safe]/skeptic-codex-merged.md`.
+  - `optimizer-codex-full`: use `gpt-5.5` with high reasoning; read the full changed files before judging each hunk. Writes `.reviews/[branch_safe]/optimizer-codex-full.md`.
+  - `optimizer-codex-diff`: use `gpt-5.4-mini` with medium reasoning; review from diff hunks first, reading surrounding code only when needed. Writes `.reviews/[branch_safe]/optimizer-codex-diff.md`.
+- Merge `optimizer-codex-full.md` and `optimizer-codex-diff.md` into `.reviews/[branch_safe]/optimizer-codex-merged.md`.
+- Spawn two Skeptic subagents in parallel with the same diff/full context split, writing `.reviews/[branch_safe]/skeptic-codex-full.md` and `.reviews/[branch_safe]/skeptic-codex-diff.md`.
+- Merge `skeptic-codex-full.md` and `skeptic-codex-diff.md` into `.reviews/[branch_safe]/skeptic-codex-merged.md`.
 
 Trust model:
 - `gpt-5.5` is the primary Codex authority for auto-fix decisions.

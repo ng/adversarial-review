@@ -24,6 +24,11 @@ jobs:
       - name: Validate marketplace.json
         run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
 
+      - name: Validate workflow/action YAML
+        run: |
+          pip install --quiet pyyaml
+          python3 -c "import yaml; yaml.safe_load(open('.github/workflows/validate.yml')); yaml.safe_load(open('action.yml')); print('YAML OK')"
+
       - name: Check required fields in plugin.json
         run: |
           python3 -c "
