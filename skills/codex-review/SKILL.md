@@ -10,10 +10,10 @@ Use this skill only in Codex. The Claude Code slash command lives in `claude/ski
 ## Usage
 
 ```text
-$adversarial-review
-$adversarial-review --no-fix
-$adversarial-review 405
-$adversarial-review --compare-claude
+$adversarial-review                  # auto-fix (default), auto-detect PR
+$adversarial-review 405              # auto-fix, specific PR
+$adversarial-review --no-fix         # review only, no code modifications
+$adversarial-review --compare-claude # compare Codex findings with Claude artifacts
 ```
 
 Arguments:

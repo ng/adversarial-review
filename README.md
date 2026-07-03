@@ -43,7 +43,22 @@ codex plugin add adversarial-review@adversarial-review
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
 /adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor reviewer
 ```
+
+#### Cross-vendor diversity (`--with-codex`)
+
+By default every reviewer in a Claude run is a Claude model (Sonnet + Opus), which share blind spots.
+Pass `--with-codex` to add an OpenAI Codex reviewer as a background Bash sidecar alongside the
+Claude reviewer agents — it writes the same report files the merge step reads (`optimizer-codex.md`,
+`skeptic-codex.md`), so it's a first-class reviewer. A finding both vendors independently flag is
+almost certainly real; a finding only Codex raises is blind-spot coverage one vendor can't give you.
+
+Requires the [`codex` CLI](https://github.com/openai/codex) installed and authenticated via
+`codex login` (ChatGPT SSO — no API key needed). If Codex is unavailable the review proceeds
+Claude-only with a note; the sidecar can only add coverage, never block a review. The Codex
+reviewer runs in a `read-only` sandbox, which structurally enforces the report-only constraint.
+Local CLI only for now — the GitHub Action runs Claude-only.
 
 ### Codex
 
@@ -54,7 +69,7 @@ $adversarial-review --no-fix         # review only, no code modifications
 $adversarial-review --compare-claude # compare Codex findings with Claude artifacts
 ```
 
-Codex is not a literal `model: "codex"` drop-in for the Claude Code `Agent` tool. For true cross-provider review, run Claude and Codex as separate reviewer lanes that write comparable `.reviews/<branch_safe>/` artifacts, then synthesize agreement and disagreement.
+Codex is not a literal `model: "codex"` drop-in for the Claude Code `Agent` tool. For cross-provider review, either pass `--with-codex` to the Claude run (Codex joins as a read-only `codex exec` sidecar whose reports merge into the same synthesis) or run Claude and Codex as fully separate reviewer lanes that write comparable `.reviews/<branch_safe>/` artifacts, then synthesize agreement and disagreement.
 
 ## GitHub Action
 
@@ -364,7 +379,7 @@ Several patterns in this plugin were directly informed by studying Claude Code's
 ## Known limitations
 
 - A determined attacker who understands the specific models, prompts, and consensus logic could craft code that fools all four agents simultaneously. This is a defense-in-depth layer, not a security boundary.
-- A single Claude run uses Claude models — "multi-model" there means Sonnet + Opus, which is within-family diversity, not multi-vendor diversity. For true cross-provider review, run the Codex `$adversarial-review --compare-claude` lane against the Claude artifacts and treat provider disagreement as a first-class review outcome.
+- A default Claude run uses Claude models — "multi-model" there means Sonnet + Opus, which is within-family diversity, not multi-vendor diversity. For cross-vendor review, pass `--with-codex` to add a Codex sidecar reviewer to the Claude run, or run the Codex `$adversarial-review --compare-claude` lane against the Claude artifacts and treat provider disagreement as a first-class review outcome.
 - The Skeptic's self-correction is bounded but not eliminated — it can still flip correct Optimizer findings to incorrect (Huang et al.). Multi-model diversity reduces but does not remove this risk.
 - Deception detection relies on the LLM's ability to reason about naming vs behavior, which is itself susceptible to sophisticated adversarial patterns (Bernstein et al.).
 - Weighted escalation scoring improves on coarse heuristics but remains an approximation — some high-risk patterns in low-scoring diffs may still get standard depth. Projects can fine-tune via `.claude/docs/code-review.md` critical lenses.
