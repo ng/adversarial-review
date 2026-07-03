@@ -60,6 +60,16 @@ Claude-only with a note; the sidecar can only add coverage, never block a review
 reviewer runs in a `read-only` sandbox, which structurally enforces the report-only constraint.
 Local CLI only for now — the GitHub Action runs Claude-only.
 
+To make Codex + Claude your default, set it once in `~/.claude/adversarial-review.json`
+(user-wide) or `.claude/adversarial-review.json` (per repo) instead of passing the flag per run:
+
+```json
+{ "with-codex": true }
+```
+
+Explicit flags always win — pass `--no-codex` to force a Claude-only run when the config
+defaults Codex on. See "Customizing reviews" for the full config reference.
+
 ### Codex
 
 ```
@@ -330,8 +340,23 @@ The plugin reads guidance from multiple sources:
 | `REVIEW.md` (repo root) | Review only | What to flag, what to skip, style rules |
 | `.claude/docs/code-review.md` | Review + agents | Domain-specific review checklist with severity lenses |
 | `CLAUDE.md` | All Claude Code tasks | Project conventions (also read during review) |
+| `~/.claude/adversarial-review.json` | Flag defaults (user-wide) | Default `with-codex` / `mode` for every repo |
+| `.claude/adversarial-review.json` | Flag defaults (per repo) | Same keys; overrides the user-wide file per key |
 
 Without any of these, universal lenses apply (security, performance, correctness, architecture, type safety, test coverage).
+
+### Flag defaults
+
+`adversarial-review.json` recognizes two keys (unknown keys are ignored):
+
+```json
+{
+  "with-codex": true,
+  "mode": "no-fix"
+}
+```
+
+Precedence is explicit flag > project config > user config > built-in default: `--with-codex`/`--no-codex` beat the `with-codex` key, `--no-fix`/`--fix` beat the `mode` key. A malformed config file is noted in the report and skipped — it never blocks a review.
 
 ## Plugin layout
 

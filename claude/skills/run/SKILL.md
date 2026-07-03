@@ -1,7 +1,7 @@
 ---
 name: run
 description: Adversarial multi-model code review with progressive cost-gating. Mechanical checks first (free), then Optimizer/Skeptic agents scaled to change complexity. Post-fix verification loop catches regressions.
-argument-hint: "[pr-number] [--no-fix] [--with-codex]"
+argument-hint: "[pr-number] [--no-fix|--fix] [--with-codex|--no-codex]"
 disable-model-invocation: true
 ---
 
@@ -53,17 +53,36 @@ The `summary.md` is the **review artifact of record** — it captures the full o
 
 Parse `$ARGUMENTS` for:
 - A PR number (any bare number like `405`)
-- `--no-fix` flag to disable auto-fix mode
-- `--with-codex` flag to add an OpenAI Codex reviewer
+- `--no-fix` flag to disable auto-fix mode; `--fix` to force auto-fix (overrides a `"mode": "no-fix"` config default)
+- `--with-codex` flag to add an OpenAI Codex reviewer; `--no-codex` to force Claude-only (overrides a `"with-codex": true` config default)
 
-If `--no-fix` is present, set `[mode]` to `review-only`. Otherwise, set `[mode]` to `auto-fix` (default).
+**Configuration defaults**: before resolving flags, read optional JSON config files:
 
-If `--with-codex` is present, set `[use_codex]` to `true`. Otherwise `false`. When
-`true`, before spawning reviewers, confirm the CLI is available and authenticated:
-`codex --version` (installed?) and `codex login status` (authenticated via ChatGPT
-SSO?). If either fails, set `[use_codex]` back to `false` and note in the report:
-"Codex reviewer requested but unavailable ([reason]) — proceeded Claude-only." Never
-block the review on Codex.
+1. `~/.claude/adversarial-review.json` — user-level defaults (apply in every repo)
+2. `[repo_root]/.claude/adversarial-review.json` — project-level defaults (override user-level, per key)
+
+Recognized keys (unknown keys are ignored for forward compatibility):
+
+| Key | Values | Effect |
+|-----|--------|--------|
+| `with-codex` | `true` / `false` | Default for the Codex sidecar, as if `--with-codex` were passed |
+| `mode` | `"auto-fix"` / `"no-fix"` | Default review mode |
+
+**Precedence**: explicit flag > project config > user config > built-in default.
+`--with-codex`/`--no-codex` beat the `with-codex` key; `--no-fix`/`--fix` beat the
+`mode` key. If a config file is malformed JSON, note it in the report and continue
+with built-in defaults — never block the review on config.
+
+Resolve `[mode]`: `review-only` if `--no-fix` is present, or if config `mode` is
+`"no-fix"` and `--fix` is absent. Otherwise `auto-fix` (default).
+
+Resolve `[use_codex]`: `true` if `--with-codex` is present, or if config `with-codex`
+is `true` and `--no-codex` is absent. Otherwise `false`. When `true`, before spawning
+reviewers, confirm the CLI is available and authenticated: `codex --version`
+(installed?) and `codex login status` (authenticated via ChatGPT SSO?). If either
+fails, set `[use_codex]` back to `false` and note in the report: "Codex reviewer
+requested but unavailable ([reason]) — proceeded Claude-only." Never block the
+review on Codex.
 
 If no PR number is provided, auto-detect via `gh pr view --json number`.
 
