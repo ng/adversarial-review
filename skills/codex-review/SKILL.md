@@ -5,7 +5,7 @@ description: Use in Codex to run adversarial code review with Optimizer and Skep
 
 Run an adversarial review of the current branch using Codex-native workflows.
 
-Use this skill only in Codex. The Claude Code slash command lives in `claude/skills/run/SKILL.md` and uses Claude-specific `Agent({...})` orchestration. Do not try to translate those calls literally.
+Use this skill only in Codex. The Claude Code slash command lives in `claude/skills/run/SKILL.md` and uses Claude-specific `Agent({...})` orchestration. Do not try to translate those calls literally. The shared cross-provider contract (artifact layout, finding/verdict schemas, severity and signal-gate definitions, lane preamble template) is normatively specified in `docs/review-protocol.md` — when changing a shared definition, edit that document first, then sync the copies embedded here.
 
 ## Usage
 
@@ -13,13 +13,17 @@ Use this skill only in Codex. The Claude Code slash command lives in `claude/ski
 $adversarial-review                  # auto-fix (default), auto-detect PR
 $adversarial-review 405              # auto-fix, specific PR
 $adversarial-review --no-fix         # review only, no code modifications
+$adversarial-review --paths "src/api/**,src/auth/**"  # review only branch changes under these paths
 $adversarial-review --compare-claude # compare Codex findings with Claude artifacts
 ```
 
 Arguments:
 - A bare number is the PR number.
 - `--no-fix` runs report-only mode. Without it, auto-fix mode may apply high-confidence Critical/Major fixes.
+- `--paths <glob>[,<glob>...]` scopes the review to branch changes in matching files instead of the entire branch diff.
 - `--compare-claude` treats existing `.reviews/<branch_safe>/optimizer-merged.md`, `skeptic-merged.md`, or `summary.md` files as prior Claude review evidence and asks Codex reviewers to confirm, dispute, and find missed issues.
+
+Scope handling for `--paths`: split the value on commas into `[paths]`. Translate each pattern into one git pathspec — wrap it as `':(glob)<pattern>'` when it contains `*`, `?`, or `[`; otherwise pass it bare (a directory prefix matches everything beneath it). Store the space-joined quoted pathspecs as `[pathspec]`, append `-- [pathspec]` to every `git diff` / `git log` command in this workflow, pass the same scope restriction to every subagent prompt, and report no findings outside the scope (reading out-of-scope code for context is fine). Every report starts with a `Scope: [paths]` line (`Scope: full branch` when unscoped). If `git diff --name-only origin/[base]...HEAD -- [pathspec]` is empty, report that no branch changes match `--paths`, list the branch's changed files, and stop — spawn no subagents.
 
 ## Core rule
 
@@ -30,18 +34,19 @@ Codex is not a drop-in `model: "codex"` value for Claude Code's Agent tool. For 
 The Claude Code plugin's `/adversarial-review:run --codex-lane` runs this workflow headlessly via `codex exec`, one invocation per pass, each prefixed with a phase preamble. When a preamble says you are the Codex lane of a cross-provider review orchestrated from Claude Code:
 
 - Run only the phase it names (Optimizer or Skeptic) at the depth it gives. Skip context gathering, mechanical checks, depth computation, synthesis, auto-fix, and PR/MR commenting — the orchestrating lead owns those.
+- If the preamble includes a `Scope:` line, treat it exactly like `--paths`: append `-- <pathspecs>` to every git diff/log command, restrict findings to matching files, and carry the `Scope:` header into every artifact you write.
 - Reuse `.reviews/<branch_safe>/mechanical.txt` as suite-level mechanical evidence; run only targeted commands.
 - In the Skeptic phase, treat the Claude lane's `optimizer-merged.md` exactly like `--compare-claude` artifacts: confirm, dispute, or modify each finding, and report missed issues.
 - Never modify source files; write only `.reviews/` artifacts. If subagents are unavailable, perform the pass yourself in one shot and write the standard-depth artifact.
 
 ## Workflow
 
-1. Parse arguments and set `[mode]` to `auto-fix` unless `--no-fix` is present.
+1. Parse arguments: set `[mode]` to `auto-fix` unless `--no-fix` is present, and resolve `[paths]`/`[pathspec]` per the scope-handling rules above when `--paths` is present.
 2. Gather context:
    - `git branch --show-current`
    - `git rev-parse --show-toplevel`
    - Detect `[base]` from PR metadata when available, otherwise use `origin/develop` if it exists, then `main`.
-   - Run `git fetch origin [base]`, `git log origin/[base]..HEAD --oneline`, `git diff origin/[base]...HEAD --stat`, and `git diff origin/[base]...HEAD`.
+   - Run `git fetch origin [base]`, `git log origin/[base]..HEAD --oneline`, `git diff origin/[base]...HEAD --stat`, and `git diff origin/[base]...HEAD` (scoped: append `-- [pathspec]` to the log and diff commands, and stop here if the scoped diff is empty — see Usage).
 3. Create `[repo_root]/.reviews/[branch_safe]/` and keep `.reviews/` out of commits.
 4. Read review guidance if present:
    - `REVIEW.md`
@@ -51,8 +56,8 @@ The Claude Code plugin's `/adversarial-review:run --codex-lane` runs this workfl
    - `.claude/docs/architecture.md`
    - `.claude/docs/trust-boundaries.md`
 5. Run available mechanical checks first: lint, typecheck, build, and tests. Save raw output to `.reviews/[branch_safe]/mechanical.txt`.
-6. Classify changed files as `auth`, `database`, `crypto`, `api`, `frontend`, `infra`, `config`, `test`, `docs`, `types`, or `general`.
-7. Compute review depth:
+6. Classify changed files as `auth`, `database`, `crypto`, `api`, `frontend`, `infra`, `config`, `test`, `docs`, `types`, or `general`. In a scoped run, classify in-scope files only.
+7. Compute review depth (from in-scope files when scoped; mechanical failures count regardless of where they live):
    - Skip: docs/test-only and no mechanical failures.
    - Standard: ordinary code/config changes.
    - Full: auth, crypto, database, API surface, infra, large diffs, security/breaking/migration labels, or mechanical build/test failures.
@@ -139,6 +144,7 @@ Never auto-fix:
 After applying fixes, run the mechanical checks again. Limit fix/verify to two iterations.
 
 Write `.reviews/[branch_safe]/summary.md` with:
+- Scope (`Scope: [paths]`, or `full branch`) — in a scoped run, note that out-of-scope branch changes were not reviewed.
 - Review depth and score rationale.
 - Findings provenance table: one row per finding with reviewer model (`gpt-5.5`, `gpt-5.4-mini`), lane (`codex`; plus `claude` for `--compare-claude` items, `mechanical`, or `external`), Skeptic verdict with confidence, and outcome. Cross-lane agreement must be visible at a glance.
 - Mechanical findings.
@@ -151,4 +157,4 @@ Write `.reviews/[branch_safe]/summary.md` with:
 - Verification results.
 - Recommendation: approve, request changes, or comment.
 
-If a PR number exists, post a concise summary comment. Use inline comments only for high-confidence, line-specific findings.
+If a PR number exists, post a concise summary comment. In a scoped run, the comment must open by stating the scope so the PR is never mistaken for fully reviewed. Use inline comments only for high-confidence, line-specific findings.
