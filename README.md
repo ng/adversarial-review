@@ -161,6 +161,22 @@ jobs:
 
 For cross-provider review in CI, run the Claude job and the Codex job as separate jobs and upload `.reviews/` as artifacts from each lane before a synthesis step.
 
+## Release automation
+
+Releases are managed by release-please. A `feat:` or `fix:` commit on `main` opens or updates a release PR; once that PR merges, release-please creates the GitHub release and the workflow moves the floating `v1` tag.
+
+To let release PRs run required checks and auto-merge, configure a GitHub App token for each repository that uses this workflow:
+
+1. Create a GitHub App, such as `release-please-automerge-bot`.
+2. Grant repository permissions: **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only**.
+3. Generate a private key for the app.
+4. Install the app on the repository, or on all repositories that should use release auto-merge.
+5. Add repository or organization variable `RELEASE_APP_ID` with the app id.
+6. Add repository or organization secret `RELEASE_APP_PRIVATE_KEY` with the full PEM private key.
+7. Enable repository auto-merge in GitHub settings, or run `gh api -X PATCH repos/OWNER/REPO -f allow_auto_merge=true`.
+
+Without those settings, the workflow falls back to `GITHUB_TOKEN`. That can create the release PR, but GitHub suppresses follow-on workflow runs from bot-created events, so branch protection may leave the release PR waiting for a manual merge.
+
 ### Recommended triggers
 
 Avoid `synchronize` (fires on every push) — the review is slow and expensive. Use `labeled` with a `review` label for re-runs after pushing fixes.
@@ -184,9 +200,12 @@ flowchart TD
     Docs --> Mechanical["5. Mechanical Checks<br/>lint · typecheck · build · test"]
     Mechanical --> Gate{"6. Cost Gate"}
     Gate -->|"Score ≤ 0"| Report
-    Gate -->|"Score 1–4"| Standard["Sonnet-only<br/>Optimizer + Skeptic<br/>(2 agents)"]
-    Gate -->|"Score ≥ 5"| Full["Dual-model<br/>Optimizer + Skeptic<br/>(4 agents)"]
-    Standard & Full --> Synth["7. Synthesize"]
+    Gate -->|"Score 1–4"| Standard["Claude standard<br/>Sonnet Optimizer + Skeptic<br/>(2 agents)"]
+    Gate -->|"Score ≥ 5"| Full["Claude full<br/>Sonnet + Opus<br/>Optimizer + Skeptic<br/>(4 agents)"]
+    Gate -->|"--with-codex or config"| CodexSidecar["Codex sidecar<br/>Optimizer + Skeptic<br/>GPT-5.5 primary<br/>GPT-5.4-mini diversity"]
+    Standard & Full --> ProviderMerge["Merge Claude findings"]
+    CodexSidecar --> ProviderMerge
+    ProviderMerge --> Synth["7. Synthesize findings<br/>(cross-provider when present)"]
     Synth --> ModeCheck{Auto-fix?}
     ModeCheck -->|"--no-fix"| Report
     ModeCheck -->|"Default"| Apply["Apply consensus<br/>Critical/Major fixes"]
@@ -204,12 +223,14 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    Diff["Branch diff<br/>+ PR/MR context"] --> ClaudeLane
-    Diff --> CodexLane
+    Diff["Branch diff<br/>+ PR/MR context"] --> Mode{"Run mode"}
+    Mode -->|"Claude default"| ClaudeLane
+    Mode -->|"Claude --with-codex<br/>or with-codex config"| ClaudeLane
+    Mode -->|"Claude --with-codex<br/>or Codex $adversarial-review"| CodexLane
 
     subgraph ClaudeLane["Claude Code lane"]
-        COpt["Optimizer<br/>Sonnet + Opus"]
-        CSkp["Skeptic<br/>Sonnet + Opus"]
+        COpt["Optimizer<br/>Sonnet standard<br/>Sonnet + Opus full"]
+        CSkp["Skeptic<br/>Sonnet standard<br/>Sonnet + Opus full"]
         CArt["Claude artifacts<br/>optimizer-merged.md<br/>skeptic-merged.md<br/>summary.md"]
         COpt --> CSkp --> CArt
     end
