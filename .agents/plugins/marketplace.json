@@ -1,0 +1,20 @@
+{
+  "name": "adversarial-review",
+  "interface": {
+    "displayName": "Adversarial Review"
+  },
+  "plugins": [
+    {
+      "name": "adversarial-review",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

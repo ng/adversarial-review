@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Codex cross-review support**: Added Codex plugin packaging, a Codex-native `$adversarial-review` skill, and repo marketplace metadata so Codex can run an independent review lane.
+- **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
+- **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
+
 ## [1.4.0](https://github.com/ng/adversarial-review/compare/v1.3.0...v1.4.0) (2026-04-06)
 
 

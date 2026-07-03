@@ -15,6 +15,12 @@ jobs:
       - name: Validate plugin.json
         run: python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
 
+      - name: Validate Codex plugin.json
+        run: python3 -c "import json; json.load(open('.codex-plugin/plugin.json'))"
+
+      - name: Validate Codex marketplace.json
+        run: python3 -c "import json; json.load(open('.agents/plugins/marketplace.json'))"
+
       - name: Validate marketplace.json
         run: python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
 
@@ -37,9 +43,33 @@ jobs:
           print('All required fields present')
           "
 
+      - name: Check required fields in Codex plugin.json
+        run: |
+          python3 -c "
+          import json, sys, pathlib
+          p = json.load(open('.codex-plugin/plugin.json'))
+          for field in ['name', 'version', 'description', 'skills', 'interface']:
+              if field not in p:
+                  print(f'Missing required field: {field}')
+                  sys.exit(1)
+          if not isinstance(p['skills'], str) or not p['skills'].strip():
+              print('Invalid skills field: must be a non-empty string path')
+              sys.exit(1)
+          skills_dir = pathlib.Path(p['skills'])
+          if not skills_dir.is_dir():
+              print(f'Skills directory not found: {skills_dir}')
+              sys.exit(1)
+          interface = p['interface']
+          for field in ['displayName', 'shortDescription', 'longDescription', 'developerName', 'category', 'defaultPrompt']:
+              if field not in interface:
+                  print(f'Missing interface field: {field}')
+                  sys.exit(1)
+          print('All Codex required fields present')
+          "
+
       - name: Check SKILL.md exists with frontmatter
         run: |
-          for skill_dir in skills/*/; do
+          for skill_dir in skills/*/ claude/skills/*/; do
             skill_file="${skill_dir}SKILL.md"
             if [ ! -f "$skill_file" ]; then
               echo "Missing SKILL.md in $skill_dir"
@@ -51,3 +81,24 @@ jobs:
             fi
             echo "Valid: $skill_file"
           done
+
+
+      - name: Check docs drift (SKILL.md is the source of truth)
+        run: |
+          # Usage examples must match between SKILL.md and README.md
+          if ! diff <(grep -E '^/adversarial-review:run' claude/skills/run/SKILL.md) \
+                    <(grep -E '^/adversarial-review:run' README.md); then
+            echo "Usage examples drifted between claude/skills/run/SKILL.md and README.md"
+            exit 1
+          fi
+          # Action mode default must stay fail-safe (no-fix) ...
+          if ! grep -A3 '^  mode:' action.yml | grep -q "default: 'no-fix'"; then
+            echo "action.yml mode input default is not 'no-fix'"
+            exit 1
+          fi
+          # ... and the README inputs table must document the same default
+          if ! grep -E '^\| `mode` \|' README.md | grep -q '`no-fix`'; then
+            echo "README inputs table does not document mode default 'no-fix'"
+            exit 1
+          fi
+          echo "No docs drift detected"

@@ -15,7 +15,7 @@ inputs:
     required: false
     default: '${{ github.event.pull_request.number }}'
   mode:
-    description: 'Review mode: "no-fix" (default) reports only, "auto-fix" applies consensus fixes.'
+    description: 'Review mode: "no-fix" (default) reports only, "auto-fix" applies consensus fixes. Any unrecognized value falls back to "no-fix" (fail-safe).'
     required: false
     default: 'no-fix'
   allowed_tools:
@@ -35,7 +35,12 @@ runs:
       with:
         claude_code_oauth_token: ${{ inputs.claude_code_oauth_token }}
         plugin_marketplaces: 'https://github.com/ng/adversarial-review.git'
-        plugins: 'adversarial-review'
-        prompt: '/adversarial-review:run ${{ inputs.mode == ''no-fix'' && ''--no-fix'' || '''' }} ${{ inputs.pr_number }}'
-        allowed_tools: 'Bash(git *),Bash(gh *),Bash(curl *),Bash(jq *),Bash(pnpm *),Bash(npm *),Bash(npx *),Bash(yarn *),Bash(cargo *),Bash(go *),Bash(python *),Bash(pip *),Bash(make *)${{ inputs.allowed_tools != '''' && format('',{0}'', inputs.allowed_tools) || '''' }}'
-        model: ${{ inputs.model }}
+        plugins: 'adversarial-review@adversarial-review'
+        # Fail safe: only an explicit "auto-fix" enables code modification; any other
+        # value (typos, "review-only", ...) runs with --no-fix.
+        prompt: '/adversarial-review:run ${{ inputs.mode == ''auto-fix'' && '''' || ''--no-fix'' }} ${{ inputs.pr_number }}'
+        # claude-code-action v1 removed the allowed_tools/model inputs — both are passed
+        # through claude_args instead.
+        claude_args: >-
+          --allowedTools "Bash(git *),Bash(gh *),Bash(curl *),Bash(jq *),Bash(pnpm *),Bash(npm *),Bash(npx *),Bash(yarn *),Bash(cargo *),Bash(go *),Bash(python *),Bash(pip *),Bash(make *)${{ inputs.allowed_tools != '' && format(',{0}', inputs.allowed_tools) || '' }}"
+          ${{ inputs.model != '' && format('--model {0}', inputs.model) || '' }}
