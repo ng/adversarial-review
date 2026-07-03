@@ -223,7 +223,8 @@ Fork PRs don't receive repository secrets by default, so the review job won't ru
 
 ```mermaid
 flowchart TD
-    Start(["Claude /adversarial-review:run<br/>or Codex $adversarial-review"]) --> Context["1. Get Context"]
+    Start(["Claude /adversarial-review:run<br/>or Codex $adversarial-review"]) --> Context["1. Get Context<br/>(--paths scopes the diff)"]
+    Context -->|"--paths matches<br/>no branch changes"| ScopeStop(["Stop early — list the<br/>branch's changed files"])
     Context --> PR{PR exists?}
     PR -->|Yes| Feedback["2. Pull PR/MR Feedback"]
     PR -->|No| Docs
@@ -236,8 +237,9 @@ flowchart TD
     Gate -->|"Score ≥ 5"| Full["Claude full<br/>Sonnet + Opus<br/>Optimizer + Skeptic<br/>(4 agents)"]
     Gate -->|"auto: codex CLI found<br/>or --with-codex"| CodexSidecar["Codex sidecar<br/>Optimizer + Skeptic<br/>one codex exec per pass"]
     Gate -->|"--codex-lane or config"| CodexLaneRun["Codex lane<br/>Optimizer + Skeptic<br/>GPT-5.5 primary<br/>GPT-5.4-mini diversity"]
-    Standard & Full --> ProviderMerge["Merge Claude findings"]
-    CodexSidecar & CodexLaneRun --> ProviderMerge
+    Gate -->|"config lanes adapters"| AdapterLanes["Adapter sidecars<br/>Optimizer + Skeptic<br/>one exec per pass per provider"]
+    Standard & Full --> ProviderMerge["Lead merges lane findings"]
+    CodexSidecar & CodexLaneRun & AdapterLanes --> ProviderMerge
     ProviderMerge --> Synth["7. Synthesize findings<br/>(cross-provider when present)"]
     Synth --> ModeCheck{Auto-fix?}
     ModeCheck -->|"--no-fix"| Report
@@ -262,9 +264,10 @@ providers" below).
 
 ```mermaid
 flowchart LR
-    Diff["Branch diff<br/>+ PR/MR context"] --> Mode{"Run mode"}
+    Diff["Branch diff<br/>(optionally --paths-scoped)<br/>+ PR/MR context"] --> Mode{"Run mode"}
     Mode -->|"Claude default /<br/>--with-codex / --codex-lane"| ClaudeLane
     Mode -->|"Claude auto:<br/>codex CLI found<br/>or --with-codex"| Sidecar["Codex sidecar<br/>one exec per pass<br/>optimizer-codex.md<br/>skeptic-codex.md"]
+    Mode -->|"config lanes<br/>adapters"| Adapters["Adapter sidecars<br/>one exec per pass<br/>optimizer-&lt;provider&gt;.md<br/>skeptic-&lt;provider&gt;.md"]
     Mode -->|"Claude --codex-lane<br/>or Codex $adversarial-review"| CodexLane
 
     subgraph ClaudeLane["Claude Code lane"]
@@ -284,6 +287,7 @@ flowchart LR
     CArt --> Cross["Cross-provider synthesis"]
     XArt --> Cross
     Sidecar --> Cross
+    Adapters --> Cross
     Cross --> Agree["Agreed<br/>highest confidence"]
     Cross --> Dispute["Disputed<br/>author decision"]
     Cross --> Missed["Provider misses<br/>verify before action"]
@@ -355,8 +359,8 @@ flowchart TD
 
 ### Steps
 
-0. **Parse arguments** — PR number, `--no-fix` flag (opt out of auto-fix)
-1. **Get context** — branch, diff, platform detection (GitHub/GitLab)
+0. **Parse arguments** — PR number, `--no-fix` (opt out of auto-fix), `--paths` scope, Codex flags (`--with-codex` / `--codex-lane` / `--no-codex`), config defaults and `lanes` adapters from `adversarial-review.json`
+1. **Get context** — branch, diff (scoped to `--paths` when given; stops early if no branch changes match), platform detection (GitHub/GitLab)
 2. **Pull PR/MR feedback** — CodeRabbit, Copilot, human review comments
 3. **Triage feedback** — fix now, note for report, or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
