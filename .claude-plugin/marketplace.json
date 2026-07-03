@@ -9,7 +9,7 @@
     {
       "name": "adversarial-review",
       "description": "Adversarial multi-model code review with dual Optimizer/Skeptic agents across Sonnet and Opus. Finds issues, challenges its own findings, and only auto-fixes what survives cross-model consensus.",
-      "version": "1.4.0",
+      "version": "1.6.0",
       "author": {
         "name": "ng"
       },
@@ -17,7 +17,13 @@
       "category": "development",
       "repository": "https://github.com/ng/adversarial-review",
       "license": "MIT",
-      "keywords": ["code-review", "adversarial", "multi-model", "security", "quality"]
+      "keywords": [
+        "code-review",
+        "adversarial",
+        "multi-model",
+        "security",
+        "quality"
+      ]
     }
   ]
 }
