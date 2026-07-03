@@ -406,7 +406,7 @@ The plugin reads guidance from multiple sources:
 | `.claude/docs/code-review.md` | Review + agents | Domain-specific review checklist with severity lenses |
 | `CLAUDE.md` | All Claude Code tasks | Project conventions (also read during review) |
 | `~/.claude/adversarial-review.json` | Flag defaults (user-wide) | Default `with-codex` / `codex-lane` / `mode` / `lanes` for every repo |
-| `.claude/adversarial-review.json` | Flag defaults (per repo) | Same keys; overrides the user-wide file per key |
+| `.claude/adversarial-review.json` | Flag defaults (per repo) | Same keys; overrides the user-wide file per key — except executable `lanes` adapters, which are user-level only (a project entry can only disable one) |
 | `docs/review-protocol.md` (this repo) | Spec | The normative cross-provider protocol: artifact contract, schemas, lane preamble template, adapter registry |
 
 Without any of these, universal lenses apply (security, performance, correctness, architecture, type safety, test coverage).
@@ -433,11 +433,22 @@ Without any of these, universal lenses apply (security, performance, correctness
 
 Precedence is explicit flag > project config > user config > built-in default: `--with-codex`/`--codex-lane`/`--no-codex` beat the `with-codex` and `codex-lane` keys (`codex-lane: true` wins over `with-codex: true`), `--no-fix`/`--fix` beat the `mode` key. The built-in default is **auto**: the sidecar runs whenever the `codex` CLI is installed and authenticated; an explicit `false` on either key opts out. A malformed config file is noted in the report and skipped — it never blocks a review.
 
+The `lanes` key is the exception to per-key overriding: executable adapters are
+honored from the **user-level** file only, because the project-level file ships
+with the repo under review and repo content must never define commands the
+review executes. A project-level `lanes` entry may only be `false` — disabling
+that user-defined lane for the repo — and provider names must be filename-safe
+slugs (`^[a-z0-9][a-z0-9_-]{0,31}$`); anything else is ignored with a note.
+
 ### Adding more providers (`lanes`)
 
 Codex isn't special-cased forever: any provider with a headless one-shot CLI can
 join a Claude-led review as an extra sidecar lane via the `lanes` registry — no
-plugin changes needed. Each adapter declares a `probe` (exit 0 = installed and
+plugin changes needed. Adapters live in your **user-level**
+`~/.claude/adversarial-review.json`: they define shell commands the review will
+run, so they must come from your environment, never from the repo being reviewed
+(a hostile branch could otherwise turn review setup into arbitrary execution).
+Each adapter declares a `probe` (exit 0 = installed and
 authenticated), an `exec` template (`{prompt_file}`, `{output_file}`,
 `{repo_root}` placeholders), an optional `guard` flag (set `true` when the CLI
 lacks a read-only sandbox, enabling the baseline-aware tracked-file guard), and an

@@ -185,9 +185,17 @@ or skip the lane, with a note).
 ## Provider adapter registry
 
 Extra sidecar lanes are configured, not coded. The `lanes` key in
-`adversarial-review.json` (user-level `~/.claude/adversarial-review.json`, or
-project-level `.claude/adversarial-review.json`; project overrides user per
-provider name) maps a provider slug to an adapter:
+`adversarial-review.json` maps a provider slug to an adapter.
+
+**Trust boundary**: executable adapters load from the user-level
+`~/.claude/adversarial-review.json` ONLY. Project-level
+`.claude/adversarial-review.json` ships with the repo under review, and repo
+content must never define commands the review executes — the same fail-closed
+rule as native-lane instructions. A project-level `lanes` entry may only be
+`false` (disable that user-defined lane for this repo); any object value there
+is ignored with a note. Provider slugs are interpolated into report and log
+filenames, so they must match `^[a-z0-9][a-z0-9_-]{0,31}$` — entries with a
+nonconforming name, or missing `probe`/`exec`, are dropped with a note.
 
 ```json
 {
@@ -250,8 +258,10 @@ sidecar/lane and every config-defined adapter — for a lead-harness-only run.
 1. Confirm the provider has a headless one-shot CLI (`<cli> exec`-style: prompt
    in, text out, non-interactive) and a way to either capture the final message to
    a file or reliably write a file itself.
-2. Write the adapter entry under `lanes` in `adversarial-review.json`. Prefer a
-   read-only sandbox flag if the CLI has one; set `"guard": true` if it does not.
+2. Write the adapter entry under `lanes` in your **user-level**
+   `~/.claude/adversarial-review.json` (project config cannot define executable
+   adapters). Prefer a read-only sandbox flag if the CLI has one; set
+   `"guard": true` if it does not.
 3. Run a scoped review (`--paths` on a small directory) and check that
    `optimizer-<provider>.md` / `skeptic-<provider>.md` appear, follow the finding
    schema, and carry the `Scope:` header.
