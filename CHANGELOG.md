@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **Flag defaults via config**: `~/.claude/adversarial-review.json` (user-wide) and `.claude/adversarial-review.json` (per repo) can set `"with-codex": true` and/or a default `mode`, so cross-vendor review can be the default instead of a per-run flag. Explicit flags (`--with-codex`/`--no-codex`, `--no-fix`/`--fix`) always override config.
+- **`--with-codex` cross-vendor sidecar**: Opt-in flag adds an OpenAI Codex reviewer to the Claude review as a read-only `codex exec` background sidecar writing `optimizer-codex.md` / `skeptic-codex.md`, merged into the same synthesis with cross-vendor agreement weighted above same-vendor. Soft-fails to Claude-only when the `codex` CLI is missing or unauthenticated. (Re-implements PR #21 on the two-wave orchestration.)
+- **Codex cross-review support**: Added Codex plugin packaging, a Codex-native `$adversarial-review` skill, and repo marketplace metadata so Codex can run an independent review lane.
+- **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
+- **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
+
 ## [1.4.0](https://github.com/ng/adversarial-review/compare/v1.3.0...v1.4.0) (2026-04-06)
 
 

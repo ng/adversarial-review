@@ -1,0 +1,40 @@
+{
+  "name": "adversarial-review",
+  "version": "1.4.0",
+  "description": "Adversarial code review workflows for Claude Code and Codex, with Optimizer/Skeptic review passes and mechanical verification.",
+  "author": {
+    "name": "ng",
+    "url": "https://github.com/ng"
+  },
+  "homepage": "https://github.com/ng/adversarial-review",
+  "repository": "https://github.com/ng/adversarial-review",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "adversarial",
+    "multi-model",
+    "security",
+    "quality",
+    "codex"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Adversarial Review",
+    "shortDescription": "Run Optimizer/Skeptic code reviews with Codex or compare against Claude review artifacts.",
+    "longDescription": "Adversarial Review packages a structured code review workflow with mechanical checks, Optimizer and Skeptic passes, confidence-gated findings, and persistent review artifacts. In Codex, use the adversarial-review skill to run an independent Codex review or compare against Claude-generated artifacts for cross-provider review.",
+    "developerName": "ng",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Code review",
+      "Subagents",
+      "GitHub"
+    ],
+    "websiteURL": "https://github.com/ng/adversarial-review",
+    "brandColor": "#5B5F97",
+    "defaultPrompt": [
+      "$adversarial-review",
+      "$adversarial-review --no-fix",
+      "$adversarial-review --compare-claude"
+    ]
+  }
+}

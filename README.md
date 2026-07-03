@@ -2,11 +2,13 @@
 
 ![Adversarial review demo — team-based code review with Optimizer and Skeptic agents](docs/images/demo.gif)
 
-Claude Code plugin for adversarial multi-model code review.
+Claude Code and Codex plugin for adversarial multi-model code review.
 
 Mechanical checks first (free), then AI agents scaled to change complexity. Two agents — **The Optimizer** and **The Skeptic** — review your code independently, challenge each other's findings, and only consensus issues get auto-fixed. A bounded verification loop catches regressions from fixes.
 
 ## Install
+
+### Claude Code
 
 ```
 /plugin marketplace add ng/adversarial-review
@@ -18,16 +20,70 @@ Mechanical checks first (free), then AI agents scaled to change complexity. Two 
 
 To update to the latest version, re-run both commands.
 
+### Codex
+
+Codex support is packaged through `.codex-plugin/plugin.json` and the `$adversarial-review` skill.
+
+Requires Codex CLI **v0.142.0 or newer** — earlier versions reject the repo-root marketplace path (`"path": "./"`) with `local plugin source path must not be empty` ([openai/codex#17066](https://github.com/openai/codex/issues/17066), fixed in [openai/codex#28771](https://github.com/openai/codex/pull/28771)).
+
+```
+codex plugin marketplace add ng/adversarial-review
+```
+
+```
+codex plugin add adversarial-review@adversarial-review
+```
+
 ## Usage
+
+### Claude Code
 
 ```
 /adversarial-review:run              # auto-fix (default), auto-detect PR
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
 /adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor reviewer
 ```
 
+#### Cross-vendor diversity (`--with-codex`)
+
+By default every reviewer in a Claude run is a Claude model (Sonnet + Opus), which share blind spots.
+Pass `--with-codex` to add an OpenAI Codex reviewer as a background Bash sidecar alongside the
+Claude reviewer agents — it writes the same report files the merge step reads (`optimizer-codex.md`,
+`skeptic-codex.md`), so it's a first-class reviewer. A finding both vendors independently flag is
+almost certainly real; a finding only Codex raises is blind-spot coverage one vendor can't give you.
+
+Requires the [`codex` CLI](https://github.com/openai/codex) installed and authenticated via
+`codex login` (ChatGPT SSO — no API key needed). If Codex is unavailable the review proceeds
+Claude-only with a note; the sidecar can only add coverage, never block a review. The Codex
+reviewer runs in a `read-only` sandbox, which structurally enforces the report-only constraint.
+Local CLI only for now — the GitHub Action runs Claude-only.
+
+To make Codex + Claude your default, set it once in `~/.claude/adversarial-review.json`
+(user-wide) or `.claude/adversarial-review.json` (per repo) instead of passing the flag per run:
+
+```json
+{ "with-codex": true }
+```
+
+Explicit flags always win — pass `--no-codex` to force a Claude-only run when the config
+defaults Codex on. See "Customizing reviews" for the full config reference.
+
+### Codex
+
+```
+$adversarial-review                  # auto-fix (default), auto-detect PR
+$adversarial-review 405              # auto-fix, specific PR
+$adversarial-review --no-fix         # review only, no code modifications
+$adversarial-review --compare-claude # compare Codex findings with Claude artifacts
+```
+
+Codex is not a literal `model: "codex"` drop-in for the Claude Code `Agent` tool. For cross-provider review, either pass `--with-codex` to the Claude run (Codex joins as a read-only `codex exec` sidecar whose reports merge into the same synthesis) or run Claude and Codex as fully separate reviewer lanes that write comparable `.reviews/<branch_safe>/` artifacts, then synthesize agreement and disagreement.
+
 ## GitHub Action
+
+### Claude Code Action
 
 Use as a GitHub Action to run adversarial reviews automatically on PRs:
 
@@ -64,13 +120,54 @@ jobs:
 |-------|----------|---------|-------------|
 | `claude_code_oauth_token` | Yes | — | Claude Code OAuth token |
 | `pr_number` | No | Triggering PR | PR number to review |
-| `mode` | No | `auto-fix` | `auto-fix` or `no-fix` (report only) |
+| `mode` | No | `no-fix` | `no-fix` (report only) or `auto-fix`. Unrecognized values fall back to `no-fix` (fail-safe) |
 | `allowed_tools` | No | — | Additional allowed tools (comma-separated) |
 | `model` | No | — | Model override for lead agent |
+
+### Codex Action
+
+Use `openai/codex-action@v1` when you want an independent Codex review lane in CI. This example reads the Codex workflow instructions from the checked-out repo, so it does not require installing the plugin in the runner first.
+
+```yaml
+name: Codex Adversarial Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, reopened, labeled]
+
+jobs:
+  codex-review:
+    if: >-
+      github.event.action != 'labeled' ||
+      github.event.label.name == 'review'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+          fetch-depth: 0
+      - uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt: "Read skills/codex-review/SKILL.md, then run that workflow in --no-fix mode for PR ${{ github.event.pull_request.number }}."
+          # workspace-write: the skill writes .reviews/ artifacts and mechanical.txt;
+          # a read-only sandbox would fail the run. Job permissions stay contents: read.
+          sandbox: workspace-write
+```
+
+For cross-provider review in CI, run the Claude job and the Codex job as separate jobs and upload `.reviews/` as artifacts from each lane before a synthesis step.
 
 ### Recommended triggers
 
 Avoid `synchronize` (fires on every push) — the review is slow and expensive. Use `labeled` with a `review` label for re-runs after pushing fixes.
+
+### Fork PRs and prompt injection
+
+Fork PRs don't receive repository secrets by default, so the review job won't run on them under `pull_request`. Be deliberate with the label-gated re-run path, though: applying the `review` label to a fork PR runs the full pipeline — with `contents: write` and `issues: write` — over attacker-authored code and comments. The agent prompts treat the diff and PR content as data rather than instructions, but that is a mitigation, not a security boundary; read a fork's diff before labeling it.
 
 ## How it works
 
@@ -78,7 +175,7 @@ Avoid `synchronize` (fires on every push) — the review is slow and expensive. 
 
 ```mermaid
 flowchart TD
-    Start(["/adversarial-review:run"]) --> Context["1. Get Context"]
+    Start(["Claude /adversarial-review:run<br/>or Codex $adversarial-review"]) --> Context["1. Get Context"]
     Context --> PR{PR exists?}
     PR -->|Yes| Feedback["2. Pull PR/MR Feedback"]
     PR -->|No| Docs
@@ -103,27 +200,56 @@ flowchart TD
     File --> Done([Author reviews & approves])
 ```
 
+### Cross-provider review
+
+```mermaid
+flowchart LR
+    Diff["Branch diff<br/>+ PR/MR context"] --> ClaudeLane
+    Diff --> CodexLane
+
+    subgraph ClaudeLane["Claude Code lane"]
+        COpt["Optimizer<br/>Sonnet + Opus"]
+        CSkp["Skeptic<br/>Sonnet + Opus"]
+        CArt["Claude artifacts<br/>optimizer-merged.md<br/>skeptic-merged.md<br/>summary.md"]
+        COpt --> CSkp --> CArt
+    end
+
+    subgraph CodexLane["Codex lane"]
+        XOpt["Optimizer<br/>GPT-5.5 primary<br/>GPT-5.4-mini secondary"]
+        XSkp["Skeptic<br/>GPT-5.5 evidence-gated<br/>GPT-5.4-mini challenge pass"]
+        XArt["Codex artifacts<br/>optimizer-codex-merged.md<br/>skeptic-codex-merged.md"]
+        XOpt --> XSkp --> XArt
+    end
+
+    CArt --> Cross["Cross-provider synthesis"]
+    XArt --> Cross
+    Cross --> Agree["Agreed<br/>highest confidence"]
+    Cross --> Dispute["Disputed<br/>author decision"]
+    Cross --> Missed["Provider misses<br/>verify before action"]
+    Cross --> Lower["Mini-only or weak signal<br/>lower confidence"]
+```
+
 ### Adversarial review detail (Step 6)
 
 ```mermaid
 flowchart TD
-    Team["TeamCreate +<br/>TaskCreate with dependencies"] --> Pass1
+    Spawn["Spawn Optimizer agents<br/>(wave 1)"] --> Pass1
 
     subgraph Pass1["Pass 1 — The Optimizer"]
         Optimizer["Find every issue worth fixing"]
-        OptSonnet["Sonnet teammate"]
-        OptOpus["Opus teammate<br/>(full depth only)"]
+        OptSonnet["Sonnet agent<br/>(diff-hunk context)"]
+        OptOpus["Opus agent, full-file context<br/>(full depth only)"]
         MergeOpt["Lead merges &<br/>deduplicates"]
         Optimizer --> OptSonnet & OptOpus
         OptSonnet & OptOpus --> MergeOpt
     end
 
-    MergeOpt -->|"SendMessage<br/>wake Skeptics"| Skeptic
+    MergeOpt -->|"Spawn Skeptic agents<br/>(wave 2)"| Skeptic
 
     subgraph Pass2["Pass 2 — The Skeptic"]
         Skeptic["Challenge findings +<br/>catch missed issues"]
-        SkpSonnet["Sonnet teammate"]
-        SkpOpus["Opus teammate<br/>(full depth only)"]
+        SkpSonnet["Sonnet agent<br/>(diff-hunk context)"]
+        SkpOpus["Opus agent, full-file context<br/>(full depth only)"]
         MergeSkp["Lead merges<br/>challenges"]
         Skeptic --> SkpSonnet & SkpOpus
         SkpSonnet & SkpOpus --> MergeSkp
@@ -133,9 +259,9 @@ flowchart TD
 
     subgraph Synthesis["Synthesize"]
         Confidence{"Cross-model<br/>consensus?"}
-        AutoFix["Auto-fix<br/>Critical/Major"]
+        AutoFix["Auto-fix Critical/Major<br/>(Skeptic confidence ≥ 75)"]
         Dispute["Present dispute<br/>to author"]
-        Note["Note for author<br/>(Minor/Nit)"]
+        Note["Note for author<br/>(Minor/Nit/lower confidence)"]
         Confidence -->|"Both models agree"| AutoFix
         Confidence -->|"Models disagree"| Dispute
         Confidence -->|"Low confidence"| Note
@@ -148,14 +274,14 @@ flowchart TD
         Filter{"Score check"}
         Keep["Keep finding"]
         Downgrade["Move to lower-confidence<br/>section"]
+        NoteOnly["Downgrade to<br/>note only"]
         Haiku --> Filter
-        Filter -->|"≥ 50"| Keep
-        Filter -->|"< 50"| Downgrade
+        Filter -->|"> 60"| Keep
+        Filter -->|"30–60 and<br/>Skeptic < 50"| Downgrade
+        Filter -->|"< 30"| NoteOnly
     end
 
-    Keep & Downgrade --> ShutdownReq["SendMessage<br/>shutdown_request"]
-    ShutdownReq --> Shutdown["TeamDelete"]
-    Shutdown --> PR["Post inline<br/>PR/MR comments"]
+    Keep & Downgrade & NoteOnly --> PR["Post inline<br/>PR/MR comments"]
     PR --> Artifacts
 
     subgraph Artifacts["Review artifacts"]
@@ -174,10 +300,22 @@ flowchart TD
 3. **Triage feedback** — fix now, note for report, or dismiss
 4. **Read convention docs** — `REVIEW.md`, `.claude/docs/` review lenses
 5. **Mechanical checks (free)** — lint, typecheck, build, tests before any LLM spend
-6. **Adversarial review** — change-type classification, weighted escalation scoring, then standard (2 teammates) or full (4 teammates) coordinated via agent team with task dependencies. Reviewers run as background agents — follow along live in the agents view (`← for agents`), or watch reports land in `.reviews/<branch_safe>/`
+6. **Adversarial review** — change-type classification, weighted escalation scoring, then standard (2 reviewer agents) or full (4 reviewer agents) spawned in two waves: Optimizers first, Skeptics after the Optimizer merge lands. Claude reviewers run as background agents — follow along live in the agents view (`← for agents`), or watch reports land in `.reviews/<branch_safe>/`. Codex reviewers run as Codex subagents and write comparable artifacts.
 7. **Synthesize** — confidence-based filtering, Haiku scoring pass, then apply consensus fixes (auto-fix) or report as suggestions (review-only)
 8. **Structured report** — findings posted as inline PR/MR comments + persistent `summary.md` artifact
 9. **File issues** — offered after report: deferred, disputed, and pre-existing items filed with full review context
+
+## vs. the built-in /code-review
+
+Claude Code ships a built-in `/code-review` with effort tiers and a cloud "ultra" mode. This plugin overlaps on the basics but differs in mechanism:
+
+- **Adversarial verification** — a second pass (The Skeptic) must independently confirm or refute every finding, with evidence-gated verdicts backed by command output rather than reasoning alone.
+- **Consensus-gated auto-fix** — only findings that survive the Skeptic at high confidence are fixed, followed by a bounded verify loop (max 2 iterations) to catch regressions from the fixes themselves.
+- **GitLab support** — MR feedback, inline discussions, and issue filing via the GitLab API.
+- **PR-feedback triage** — pulls CodeRabbit/Copilot/human review comments and triages them through the same pipeline.
+- **Issue filing** — deferred, disputed, and pre-existing findings can be filed as issues with the full debate context.
+
+For a quick single-pass review of a working diff, the built-in command is cheaper and faster.
 
 ## Severity levels
 
@@ -191,7 +329,7 @@ flowchart TD
 
 ## Review artifacts
 
-Agent reports are saved to `.reviews/<branch_safe>/` in the project (branch names are sanitized — `feat/foo` becomes `feat-foo`). The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. Add `.reviews/` to `.gitignore` (or commit `summary.md` files separately if you want review history).
+Agent reports are saved to `.reviews/<branch_safe>/` in the project (branch names are sanitized — `feat/foo` becomes `feat-foo`). The `summary.md` is the persistent artifact of record — it captures what was fixed, disputed, deferred, and any filed issue numbers. The review adds `.reviews/` to `.gitignore` automatically if it isn't ignored yet, so artifacts never land in an auto-fix commit. Commit `summary.md` files separately if you want review history.
 
 ## Customizing reviews
 
@@ -202,8 +340,32 @@ The plugin reads guidance from multiple sources:
 | `REVIEW.md` (repo root) | Review only | What to flag, what to skip, style rules |
 | `.claude/docs/code-review.md` | Review + agents | Domain-specific review checklist with severity lenses |
 | `CLAUDE.md` | All Claude Code tasks | Project conventions (also read during review) |
+| `~/.claude/adversarial-review.json` | Flag defaults (user-wide) | Default `with-codex` / `mode` for every repo |
+| `.claude/adversarial-review.json` | Flag defaults (per repo) | Same keys; overrides the user-wide file per key |
 
 Without any of these, universal lenses apply (security, performance, correctness, architecture, type safety, test coverage).
+
+### Flag defaults
+
+`adversarial-review.json` recognizes two keys (unknown keys are ignored):
+
+```json
+{
+  "with-codex": true,
+  "mode": "no-fix"
+}
+```
+
+Precedence is explicit flag > project config > user config > built-in default: `--with-codex`/`--no-codex` beat the `with-codex` key, `--no-fix`/`--fix` beat the `mode` key. A malformed config file is noted in the report and skipped — it never blocks a review.
+
+## Plugin layout
+
+Claude Code and Codex use separate skill trees so each runtime only loads instructions written for its own orchestration model:
+
+| Runtime | Manifest | Skills |
+|---------|----------|--------|
+| Claude Code | `.claude-plugin/plugin.json` | `claude/skills/` |
+| Codex | `.codex-plugin/plugin.json` | `skills/` |
 
 ## Issue filing
 
@@ -227,9 +389,9 @@ This plugin's architecture is informed by research on LLM code review and first-
 
 Several patterns in this plugin were directly informed by studying Claude Code's own agent architecture (via the [March 2026 source map disclosure](https://github.com/anthropics/claude-code/issues/1956)):
 
-**Anti-rationalization guards** — Claude Code's built-in verification agent explicitly lists its own failure modes in its prompt: "You have two documented failure patterns. First, verification avoidance... Second, being seduced by the first 80%." It also enumerates specific rationalizations that don't count as validation ("The code looks correct based on my reading"). We adopted this pattern for The Skeptic — explicitly naming rubber-stamping and lazy disagreement as failure modes, listing invalid verdict bases, and requiring tool-output evidence for every Agree/Disagree verdict.
+**Anti-rationalization guards** — Claude Code's built-in verification agent explicitly lists its own failure modes in its prompt: "You have two documented failure patterns. First, verification avoidance... Second, being seduced by the first 80%." It also enumerates specific rationalizations that don't count as validation ("The code looks correct based on my reading"). We adopted this pattern for The Skeptic — naming rubber-stamping and lazy disagreement as failure modes and calling out weak verdict bases. The framing is deliberately measured rather than all-caps MUST-heavy: current Claude models follow instructions literally, and aggressive protocol language written for older, laxer models over-triggers on them.
 
-**Evidence-gated verdicts** — Claude Code's verification agent requires a `Command run` block with actual output for every PASS verdict. "A check without a Command run block is not a PASS." We applied this as the mandatory `Evidence` field in Skeptic verdicts — no evidence means the verdict is a guess, labeled accordingly. This forces the Skeptic to actually run tests, grep patterns, and check types rather than reasoning about whether the Optimizer was right.
+**Evidence-gated verdicts** — Claude Code's verification agent requires a `Command run` block with actual output for every PASS verdict. "A check without a Command run block is not a PASS." We applied this as the `Evidence` field in Skeptic verdicts, tiered by stakes: command-output evidence is mandatory for verdicts on Critical/Major findings; Minor/Nit and inherently non-tool-verifiable findings (architecture, naming) accept reasoned verdicts with confidence capped at 50. The tiering keeps the forcing function where it matters while avoiding wasted tool runs on findings that are never auto-fixed — and avoids systematically burying non-mechanical findings.
 
 **Change-type strategy matrices** — Claude Code's verification agent uses different verification strategies depending on change type (frontend, backend, CLI, infra, library, bug fix, DB migrations, refactoring). We adopted this as the change-type classification step: every changed file is mapped to a type (auth, database, crypto, api, frontend, infra, etc.) with type-specific priority checks. An auth change gets privilege-escalation and IDOR checks; a database change gets migration-reversibility and N+1 checks; a frontend change gets ARIA and keyboard-nav checks.
 
@@ -237,13 +399,14 @@ Several patterns in this plugin were directly informed by studying Claude Code's
 
 **Numeric output anchors** — Claude Code's internal prompts use specific word-count limits ("Keep text between tool calls to ≤25 words") which showed measurable token reduction in A/B testing. We applied this to both agent prompts: Optimizer findings ≤50 words per Problem field, suggested fixes ≤30 words, Skeptic challenges ≤50 words. This reduces verbose reasoning that inflates cost without improving signal.
 
-**Signal gate** — Adapted from [OpenAI Codex's review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md). Every Optimizer finding must pass an 8-point checklist before being written up: it must be actionable, introduced by the PR, not demand rigor absent from the rest of the codebase, not rely on unstated assumptions, and provably identify the affected code path. This reduces false positives — especially speculative "this might break something" findings — and calibrates review strictness to the repo's existing quality bar. The Codex prompt also informed our tightened Critical severity definition (universal issues only, no scenario-dependent triggers), the mandatory Trigger field in findings (forcing reviewers to specify when a bug manifests), and the matter-of-fact tone guidance for PR comments.
+**Signal gate** — Adapted from [OpenAI Codex's review guidelines](https://github.com/openai/codex/blob/main/codex-rs/core/review_prompt.md). Every Optimizer finding is assessed against an 8-point checklist: actionable, introduced by the PR, not demanding rigor absent from the rest of the codebase, not relying on unstated assumptions, provably identifying the affected code path. Originally this was a suppression filter ("drop silently if any check fails"); it's now recorded as per-finding metadata (a `Gate` field plus a 0-100 confidence) because current Claude models follow drop-silently instructions literally — they find real bugs and then decline to report them, killing recall. Filtering instead happens downstream, where this pipeline already has the machinery for it: the Skeptic challenge, confidence thresholds, and the Haiku scoring pass. The Codex prompt also informed our tightened Critical severity definition (universal issues only, no scenario-dependent triggers), the mandatory Trigger field in findings (forcing reviewers to specify when a bug manifests), and the matter-of-fact tone guidance for PR comments.
 
 **Fix quality anti-patterns** — Claude Code's system prompt explicitly tells the model "Three similar lines of code is better than a premature abstraction" and "Don't add features, refactor code, or make 'improvements' beyond what was asked." We added these as Fix Quality Guardrails in the Optimizer prompt — preventing suggested fixes from over-engineering the solution with unnecessary abstractions, feature flags, or adjacent refactoring.
 
 ## Known limitations
 
 - A determined attacker who understands the specific models, prompts, and consensus logic could craft code that fools all four agents simultaneously. This is a defense-in-depth layer, not a security boundary.
+- A default Claude run uses Claude models — "multi-model" there means Sonnet + Opus, which is within-family diversity, not multi-vendor diversity. For cross-vendor review, pass `--with-codex` to add a Codex sidecar reviewer to the Claude run, or run the Codex `$adversarial-review --compare-claude` lane against the Claude artifacts and treat provider disagreement as a first-class review outcome.
 - The Skeptic's self-correction is bounded but not eliminated — it can still flip correct Optimizer findings to incorrect (Huang et al.). Multi-model diversity reduces but does not remove this risk.
 - Deception detection relies on the LLM's ability to reason about naming vs behavior, which is itself susceptible to sophisticated adversarial patterns (Bernstein et al.).
 - Weighted escalation scoring improves on coarse heuristics but remains an approximation — some high-risk patterns in low-scoring diffs may still get standard depth. Projects can fine-tune via `.claude/docs/code-review.md` critical lenses.
