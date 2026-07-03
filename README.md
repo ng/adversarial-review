@@ -65,7 +65,8 @@ finding only Codex raises is blind-spot coverage one vendor can't give you.
   phase reads the Claude lane's `optimizer-merged.md` as `--compare-claude` input, so every
   Claude finding gets a genuinely cross-vendor challenge. Needs a `workspace-write` sandbox to
   write its artifacts; containment falls back to prompt contract, a gitignored `.reviews/`, and
-  a post-phase tracked-file check that reverts any stray source edits. Costs more.
+  a baseline-aware tracked-file guard (pre-phase snapshot, then revert only what the lane newly
+  dirtied — pre-existing uncommitted work is never touched). Costs more.
 
 **The sidecar is the default when available**: if the
 [`codex` CLI](https://github.com/openai/codex) is installed and authenticated via `codex login`
