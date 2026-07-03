@@ -2,5 +2,27 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "dependencyDashboard": true,
+  "minimumReleaseAge": "14 days",
+  "prConcurrentLimit": 2,
+  "prHourlyLimit": 1,
+  "schedule": [
+    "before 5am on monday"
+  ],
+  "packageRules": [
+    {
+      "description": "Batch routine GitHub Actions updates into one low-noise PR.",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "GitHub Actions updates",
+      "groupSlug": "github-actions"
+    }
   ]
 }
