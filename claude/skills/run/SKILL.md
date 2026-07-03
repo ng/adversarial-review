@@ -264,7 +264,7 @@ For **standard depth**, use the same pipeline but with 2 reviewer agents (one pe
 
 Ensure the shared report directory exists: `mkdir -p [repo_root]/.reviews/[branch_safe]`
 
-**Variable substitution**: When constructing Agent prompts below, replace all template variables with actual values from Steps 0, 1, and 6: `[mode]`, `[use_codex]`, `[repo_root]`, `[branch]`, `[branch_safe]`, `[base]`, `[platform]`, `[change_types]` (plus `[gitlab_url]` and `[project_id]` when `[platform]` is `gitlab`). Replace `[OPTIMIZER_PROMPT — see below]` with the full OPTIMIZER_PROMPT text from the "Pass 1" section, and `[SKEPTIC_PROMPT — see below]` with the full SKEPTIC_PROMPT text from the "Pass 2" section. Resolve the report-filename parentheticals (e.g. "use optimizer-sonnet.md when [use_codex]") to a single concrete path before spawning — a spawned prompt must never contain an unresolved placeholder or conditional.
+**Variable substitution**: When constructing Agent prompts below, replace all template variables with actual values from Steps 0, 1, and 6: `[mode]`, `[use_codex]`, `[repo_root]`, `[branch]`, `[branch_safe]`, `[base]`, `[platform]`, `[change_types]` (plus `[gitlab_url]` and `[project_id]` when `[platform]` is `gitlab`). Replace `[OPTIMIZER_PROMPT — see below]` with the full OPTIMIZER_PROMPT text from the "Pass 1" section, and `[SKEPTIC_PROMPT — see below]` with the full SKEPTIC_PROMPT text from the "Pass 2" section. Resolve `[optimizer_report_path]` / `[skeptic_report_path]` (defined in comments above the standard-depth spawn blocks) to a single concrete filename before spawning — a spawned prompt must never contain an unresolved placeholder or conditional.
 
 **Sequencing**: Agents are spawned in two waves — Optimizers first, Skeptics only after `optimizer-merged.md` is on disk. Each agent gets its complete assignment in its prompt, works, and finishes; the Agent tool's completion notifications tell the lead when a wave is done. No task lists, wake messages, or shutdown protocol are needed.
 
@@ -311,6 +311,7 @@ Agent({
 > standard-depth Skeptic later (`skeptic-sonnet.md` instead of `skeptic-merged.md`).
 
 ```javascript
+// [optimizer_report_path] = optimizer-sonnet.md when [use_codex], else optimizer-merged.md
 Agent({
   name: "optimizer-sonnet",
   subagent_type: "general-purpose",
@@ -319,7 +320,7 @@ Agent({
   run_in_background: true,
   prompt: `You are "The Optimizer".
   [OPTIMIZER_PROMPT — see below]
-  Write findings to [repo_root]/.reviews/[branch_safe]/optimizer-merged.md   (use optimizer-sonnet.md when [use_codex])
+  Write findings to [repo_root]/.reviews/[branch_safe]/[optimizer_report_path]
   When done, verify the report file exists and is non-empty. Your final message: the report path plus finding counts by severity.`
 })
 ```
@@ -604,6 +605,7 @@ Optimizer agents begin reviewing immediately on spawn. The lead waits for their 
    **Standard depth** — 1 Skeptic agent:
 
    ```javascript
+   // [skeptic_report_path] = skeptic-sonnet.md when [use_codex], else skeptic-merged.md
    Agent({
      name: "skeptic-sonnet",
      subagent_type: "general-purpose",
@@ -612,7 +614,7 @@ Optimizer agents begin reviewing immediately on spawn. The lead waits for their 
      run_in_background: true,
      prompt: `You are "The Skeptic".
      [SKEPTIC_PROMPT — see below]
-     Write challenge report to [repo_root]/.reviews/[branch_safe]/skeptic-merged.md   (use skeptic-sonnet.md when [use_codex])
+     Write challenge report to [repo_root]/.reviews/[branch_safe]/[skeptic_report_path]
      When done, verify the report file exists and is non-empty. Your final message: the report path plus verdict counts.`
    })
    ```
