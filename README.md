@@ -168,7 +168,7 @@ Releases are managed by release-please. A `feat:` or `fix:` commit on `main` ope
 To let release PRs run required checks and auto-merge, configure a GitHub App token for each repository that uses this workflow:
 
 1. Create a GitHub App, such as `release-please-automerge-bot`.
-2. Grant repository permissions: **Contents: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only**.
+2. Grant repository permissions: **Contents: Read and write**, **Issues: Read and write**, **Pull requests: Read and write**, and **Metadata: Read-only**.
 3. Generate a private key for the app.
 4. Install the app on the repository, or on all repositories that should use release auto-merge.
 5. Add repository or organization variable `RELEASE_APP_ID` with the app id.
