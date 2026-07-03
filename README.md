@@ -43,9 +43,23 @@ codex plugin add adversarial-review@adversarial-review
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
 /adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --paths "src/api/**,src/auth/**"  # review only branch changes under these paths
 /adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor sidecar reviewer
 /adversarial-review:run --codex-lane # run the full Codex-native review lane alongside Claude
 ```
+
+#### Scoped reviews (`--paths`)
+
+By default a review covers the entire branch diff. `--paths <glob>[,<glob>...]`
+restricts it to branch changes in matching files — useful for re-reviewing one
+subsystem after a big rebase, splitting the review of a large branch, or pointing
+the pipeline at just the risky directory. Patterns become git pathspecs (globs get
+`:(glob)` semantics, bare directories match everything beneath them); change-type
+classification and review depth are computed from in-scope files only; every
+artifact and PR comment is labeled with the scope so a partial review is never
+mistaken for a full one. If no branch changes match, the review stops early and
+lists the branch's changed files. Both entry points support it — the Codex form is
+`$adversarial-review --paths "..."`.
 
 #### Cross-vendor diversity (`--with-codex`, `--codex-lane`)
 
@@ -92,6 +106,7 @@ sidecar. Explicit flags always win — `--no-codex` forces a Claude-only run, `-
 $adversarial-review                  # auto-fix (default), auto-detect PR
 $adversarial-review 405              # auto-fix, specific PR
 $adversarial-review --no-fix         # review only, no code modifications
+$adversarial-review --paths "src/api/**"  # review only branch changes under these paths
 $adversarial-review --compare-claude # compare Codex findings with Claude artifacts
 ```
 
@@ -137,6 +152,7 @@ jobs:
 | `claude_code_oauth_token` | Yes | — | Claude Code OAuth token |
 | `pr_number` | No | Triggering PR | PR number to review |
 | `mode` | No | `no-fix` | `no-fix` (report only) or `auto-fix`. Unrecognized values fall back to `no-fix` (fail-safe) |
+| `paths` | No | — | Comma-separated paths/globs to scope the review to (passed as `--paths`) |
 | `allowed_tools` | No | — | Additional allowed tools (comma-separated) |
 | `model` | No | — | Model override for lead agent |
 
@@ -237,6 +253,12 @@ flowchart TD
 ```
 
 ### Cross-provider review
+
+The interop layer between providers is **files, not APIs**: every lane writes
+comparable `.reviews/<branch_safe>/` artifacts and synthesis reads files. The
+contract is specified in [`docs/review-protocol.md`](docs/review-protocol.md);
+providers beyond Codex join via the `lanes` adapter registry (see "Adding more
+providers" below).
 
 ```mermaid
 flowchart LR
@@ -379,24 +401,50 @@ The plugin reads guidance from multiple sources:
 | `REVIEW.md` (repo root) | Review only | What to flag, what to skip, style rules |
 | `.claude/docs/code-review.md` | Review + agents | Domain-specific review checklist with severity lenses |
 | `CLAUDE.md` | All Claude Code tasks | Project conventions (also read during review) |
-| `~/.claude/adversarial-review.json` | Flag defaults (user-wide) | Default `with-codex` / `codex-lane` / `mode` for every repo |
+| `~/.claude/adversarial-review.json` | Flag defaults (user-wide) | Default `with-codex` / `codex-lane` / `mode` / `lanes` for every repo |
 | `.claude/adversarial-review.json` | Flag defaults (per repo) | Same keys; overrides the user-wide file per key |
+| `docs/review-protocol.md` (this repo) | Spec | The normative cross-provider protocol: artifact contract, schemas, lane preamble template, adapter registry |
 
 Without any of these, universal lenses apply (security, performance, correctness, architecture, type safety, test coverage).
 
 ### Flag defaults
 
-`adversarial-review.json` recognizes three keys (unknown keys are ignored):
+`adversarial-review.json` recognizes four keys (unknown keys are ignored):
 
 ```json
 {
   "with-codex": true,
   "codex-lane": false,
-  "mode": "no-fix"
+  "mode": "no-fix",
+  "lanes": {
+    "gemini": {
+      "probe": "gemini --version",
+      "exec": "gemini --prompt \"$(cat {prompt_file})\" > {output_file}",
+      "guard": true,
+      "models": "gemini-3-pro"
+    }
+  }
 }
 ```
 
 Precedence is explicit flag > project config > user config > built-in default: `--with-codex`/`--codex-lane`/`--no-codex` beat the `with-codex` and `codex-lane` keys (`codex-lane: true` wins over `with-codex: true`), `--no-fix`/`--fix` beat the `mode` key. The built-in default is **auto**: the sidecar runs whenever the `codex` CLI is installed and authenticated; an explicit `false` on either key opts out. A malformed config file is noted in the report and skipped — it never blocks a review.
+
+### Adding more providers (`lanes`)
+
+Codex isn't special-cased forever: any provider with a headless one-shot CLI can
+join a Claude-led review as an extra sidecar lane via the `lanes` registry — no
+plugin changes needed. Each adapter declares a `probe` (exit 0 = installed and
+authenticated), an `exec` template (`{prompt_file}`, `{output_file}`,
+`{repo_root}` placeholders), an optional `guard` flag (set `true` when the CLI
+lacks a read-only sandbox, enabling the baseline-aware tracked-file guard), and an
+informational `models` string for provenance tables. Adapter lanes get the same
+lifecycle as the Codex sidecar: probed before spawning, one call per pass, process
+exit as the completion signal, ~10-minute timeout, and never able to block a
+review. Their reports (`optimizer-<provider>.md` / `skeptic-<provider>.md`) merge
+into the same synthesis, and cross-vendor agreement weighting applies to every
+lane equally. `--no-codex` disables all cross-vendor lanes, config-defined ones
+included. Full schema, orchestration contract, and an add-a-provider checklist:
+[`docs/review-protocol.md`](docs/review-protocol.md).
 
 ## Plugin layout
 
@@ -406,6 +454,13 @@ Claude Code and Codex use separate skill trees so each runtime only loads instru
 |---------|----------|--------|
 | Claude Code | `.claude-plugin/plugin.json` | `claude/skills/` |
 | Codex | `.codex-plugin/plugin.json` | `skills/` |
+
+What the two trees share — the artifact contract, finding/verdict schemas,
+severity and signal-gate definitions, lane preamble template, and provider adapter
+registry — is normatively specified in
+[`docs/review-protocol.md`](docs/review-protocol.md). The skill files embed copies
+where subagent prompts need them inline; when changing a shared definition, edit
+the protocol doc first, then sync the embedded copies.
 
 ## Issue filing
 
