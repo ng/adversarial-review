@@ -140,6 +140,7 @@ After applying fixes, run the mechanical checks again. Limit fix/verify to two i
 
 Write `.reviews/[branch_safe]/summary.md` with:
 - Review depth and score rationale.
+- Findings provenance table: one row per finding with reviewer model (`gpt-5.5`, `gpt-5.4-mini`), lane (`codex`; plus `claude` for `--compare-claude` items, `mechanical`, or `external`), Skeptic verdict with confidence, and outcome. Cross-lane agreement must be visible at a glance.
 - Mechanical findings.
 - Codex findings.
 - Claude comparison results, when present.

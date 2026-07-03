@@ -1090,13 +1090,20 @@ a false positive (groupthink), because Haiku sees each finding in isolation.
 
 Compile findings from all sources into:
 
-| Source | Severity | File | Finding | Skeptic Verdict | Confidence | Status |
-|--------|----------|------|---------|-----------------|------------|--------|
-| Mechanical | ... | ... | ... | — | — | Fixed / Reported |
-| PR Feedback | ... | ... | ... | — | — | Fixed / Skipped / Needs discussion |
-| Optimizer | ... | ... | ... | Agree / Disagree / Modified | [0-100] | Fixed / Disputed / Deferred |
-| Skeptic (missed) | ... | ... | ... | — | [0-100] | Fixed / Deferred |
-| Pre-existing | 🟣 | ... | ... | — | — | Issue filed / Noted |
+| Source | Reviewer (lane) | Severity | File | Finding | Skeptic Verdict | Confidence | Status |
+|--------|-----------------|----------|------|---------|-----------------|------------|--------|
+| Mechanical | lint/typecheck/build/test (mechanical) | ... | ... | ... | — | — | Fixed / Reported |
+| PR Feedback | coderabbit / copilot / human (external) | ... | ... | ... | — | — | Fixed / Skipped / Needs discussion |
+| Optimizer | e.g. `sonnet (claude) + gpt-5.5 (codex lane)` | ... | ... | ... | Agree / Disagree / Modified | [0-100] | Fixed / Disputed / Deferred |
+| Skeptic (missed) | e.g. `opus (claude)` | ... | ... | ... | — | [0-100] | Fixed / Deferred |
+| Pre-existing | ... | 🟣 | ... | ... | — | — | Issue filed / Noted |
+
+**Reviewer (lane)** attributes every finding to who flagged it and which lane they ran
+in. Lane vocabulary: `claude` (Agent-tool reviewers: sonnet/opus), `codex sidecar`
+(`--with-codex` one-shot exec), `codex lane` (`--codex-lane` native workflow:
+gpt-5.5/gpt-5.4-mini), `external` (PR feedback), `mechanical` (Step 5 checks). List
+every reviewer that independently flagged the finding — cross-lane agreement is the
+strongest signal in the review and must be visible at a glance.
 
 Report sections:
 - **Summary**: What was added/modified/removed
@@ -1186,6 +1193,12 @@ Branch: [branch] → [base]
 [2-3 sentence walkthrough]
 
 ## Findings
+
+### Provenance
+| Finding | Reviewer(s) (lane) | Skeptic verdicts (lane: verdict/conf) | Haiku | Outcome |
+|---------|--------------------|---------------------------------------|-------|---------|
+[one row per finding, using the same lane vocabulary as the Step 8 report table —
+cross-lane agreement must be visible at a glance; "—" where a stage didn't run]
 
 ### Fixed ([count])
 [list of findings that were auto-fixed, with file:line and one-line description]
