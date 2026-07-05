@@ -107,9 +107,9 @@ jobs:
             echo "action.yml mode input default is not 'no-fix'"
             exit 1
           fi
-          # ... and the README inputs table must document the same default
-          if ! grep -E '^\| `mode` \|' README.md | grep -q '`no-fix`'; then
-            echo "README inputs table does not document mode default 'no-fix'"
+          # ... and the Action inputs table must document the same default
+          if ! grep -E '^\| `mode` \|' docs/github-actions.md | grep -q '`no-fix`'; then
+            echo "docs/github-actions.md inputs table does not document mode default 'no-fix'"
             exit 1
           fi
           echo "No docs drift detected"

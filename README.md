@@ -46,24 +46,25 @@ codex plugin add adversarial-review@adversarial-review
 
 ### Claude Code
 
-| Command | What it does |
-|---------|--------------|
-| `/adversarial-review:run` | Auto-fix (default), auto-detect PR |
-| `/adversarial-review:run 405` | Auto-fix a specific PR |
-| `/adversarial-review:run --no-fix` | Review only, no code changes |
-| `/adversarial-review:run --paths "src/api/**,src/auth/**"` | Scope to matching branch changes |
-| `/adversarial-review:run --with-codex` | Add OpenAI Codex as a read-only sidecar reviewer |
-| `/adversarial-review:run --codex-lane` | Run the full Codex-native review lane alongside Claude |
+```
+/adversarial-review:run              # auto-fix (default), auto-detect PR
+/adversarial-review:run 405          # auto-fix, specific PR
+/adversarial-review:run --no-fix     # review only, no code modifications
+/adversarial-review:run --no-fix 405 # review only, specific PR
+/adversarial-review:run --paths "src/api/**,src/auth/**"  # review only branch changes under these paths
+/adversarial-review:run --with-codex # add OpenAI Codex as a cross-vendor sidecar reviewer
+/adversarial-review:run --codex-lane # run the full Codex-native review lane alongside Claude
+```
 
 ### Codex
 
-| Command | What it does |
-|---------|--------------|
-| `$adversarial-review` | Auto-fix (default), auto-detect PR |
-| `$adversarial-review 405` | Auto-fix a specific PR |
-| `$adversarial-review --no-fix` | Review only, no code changes |
-| `$adversarial-review --paths "..."` | Scope to matching branch changes |
-| `$adversarial-review --compare-claude` | Compare Codex findings with Claude artifacts |
+```
+$adversarial-review                  # auto-fix (default), auto-detect PR
+$adversarial-review 405              # auto-fix, specific PR
+$adversarial-review --no-fix         # review only, no code modifications
+$adversarial-review --paths "src/api/**,src/auth/**"  # review only branch changes under these paths
+$adversarial-review --compare-claude # compare Codex findings with Claude artifacts
+```
 
 Flags combine — see [Configuration](docs/configuration.md) to set defaults once
 instead of passing them every run, and [Cross-provider review](docs/cross-provider.md)
