@@ -22,7 +22,7 @@ your strongest signal.
 
 ### Claude Code
 
-```
+```bash
 /plugin marketplace add ng/adversarial-review
 /plugin install adversarial-review
 ```
@@ -37,7 +37,7 @@ versions reject the repo-root marketplace path with `local plugin source path
 must not be empty` ([openai/codex#17066](https://github.com/openai/codex/issues/17066),
 fixed in [#28771](https://github.com/openai/codex/pull/28771)).
 
-```
+```bash
 codex plugin marketplace add ng/adversarial-review
 codex plugin add adversarial-review@adversarial-review
 ```
@@ -46,7 +46,7 @@ codex plugin add adversarial-review@adversarial-review
 
 ### Claude Code
 
-```
+```bash
 /adversarial-review:run              # auto-fix (default), auto-detect PR
 /adversarial-review:run 405          # auto-fix, specific PR
 /adversarial-review:run --no-fix     # review only, no code modifications
@@ -58,7 +58,7 @@ codex plugin add adversarial-review@adversarial-review
 
 ### Codex
 
-```
+```bash
 $adversarial-review                  # auto-fix (default), auto-detect PR
 $adversarial-review 405              # auto-fix, specific PR
 $adversarial-review --no-fix         # review only, no code modifications
