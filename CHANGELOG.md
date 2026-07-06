@@ -8,6 +8,13 @@
 - **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
 - **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
 
+## [1.7.0](https://github.com/ng/adversarial-review/compare/v1.6.1...v1.7.0) (2026-07-06)
+
+
+### Features
+
+* add --paths review scoping and a cross-provider adapter registry ([#32](https://github.com/ng/adversarial-review/issues/32)) ([78b9093](https://github.com/ng/adversarial-review/commit/78b909359d5344799bcc747134d2e1d79628bcc0))
+
 ## [1.6.1](https://github.com/ng/adversarial-review/compare/v1.6.0...v1.6.1) (2026-07-03)
 
 
