@@ -1,19 +1,19 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:11:20.365675+00:00
+Generated: 2026-09-09T10:16:23.360722+00:00
 
 **Status: incomplete until every requested review and evaluation has succeeded.**
 
 | Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 11 | 0 | 10 |
+| martian | 50 | single | 12 | 0 | 11 |
 | martian | 50 | adversarial | 1 | 7 | 1 |
 | martian | 50 | cross-provider | 1 | 7 | 1 |
-| swe-prbench | 350 | single | 5 | 0 | 4 |
+| swe-prbench | 350 | single | 5 | 0 | 5 |
 | swe-prbench | 350 | adversarial | 1 | 0 | 1 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 1 | 0 | 1 |
-| c-crab | 184 | adversarial | 0 | 0 | 0 |
+| c-crab | 184 | single | 2 | 0 | 1 |
+| c-crab | 184 | adversarial | 1 | 0 | 0 |
 | c-crab | 184 | cross-provider | 0 | 0 | 0 |
 
 ## Quality on paired completed cases
@@ -44,14 +44,14 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 
 | Benchmark | Configuration | Completed reviews | Median seconds | Claude input tokens (incl. cache) | Claude output tokens |
 |---|---|---:|---:|---:|---:|
-| martian | single | 11 | 219.5 | 13185771 | 213334 |
+| martian | single | 12 | 226.6 | 14124768 | 233515 |
 | martian | adversarial | 1 | 1023.8 | 6559415 | 97360 |
 | martian | cross-provider | 1 | 1024.5 | 7193592 | 104081 |
 | swe-prbench | single | 5 | 210.8 | 8118771 | 89712 |
 | swe-prbench | adversarial | 1 | 1376.8 | 6936972 | 124165 |
 | swe-prbench | cross-provider | 0 | — | — | — |
-| c-crab | single | 1 | 235.8 | 779392 | 20615 |
-| c-crab | adversarial | 0 | — | — | — |
+| c-crab | single | 2 | 201.9 | 1630526 | 36364 |
+| c-crab | adversarial | 1 | 889.9 | 5229126 | 84952 |
 | c-crab | cross-provider | 0 | — | — | — |
 
 ## Source pins

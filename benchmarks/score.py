@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Blind semantic scoring for Martian/SWE-PRBench; preserves every judge decision."""
+"""Semantic scoring with configuration labels withheld for Martian/SWE-PRBench; preserves every judge decision."""
 import argparse
 import concurrent.futures
 import json
@@ -169,7 +169,7 @@ def score_case(work, case):
         if (variant, 'after') not in mapping:
             continue
         result = {'judge_model': CONFIG['judge_model'], 'judge_hash': payload_hash,
-                  'method': 'adapted-blind-batched-semantic-judge', 'profiles': {}}
+                  'method': 'adapted-batched-semantic-judge', 'profiles': {}}
         before_roots = candidate_roots(mapping[variant, 'before'], labels)
         after_roots = candidate_roots(mapping[variant, 'after'], labels)
         removed = before_roots - after_roots

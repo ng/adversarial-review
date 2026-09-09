@@ -19,7 +19,7 @@ report the same cases as an untouched evaluation set.
 
 The native review really spawned and completed two subagents and produced
 Optimizer, Skeptic, and summary artifacts. The Skeptic rejected no candidates
-and added three. The blind judge labeled all nine unmatched final findings
+and added three. The shared judge labeled all nine unmatched final findings
 PLAUSIBLE, with zero FABRICATED labels. The baseline and native review caught
 partly different reference issues despite matching the same count.
 
@@ -208,7 +208,7 @@ reviewer changes separate from the frozen experiment until the baseline finishes
 
 ## First three-way paired score (preliminary)
 
-The shared blind judgment for Cal.com matched 2/6 reference issues for single-pass,
+The shared judgment for Cal.com matched 2/6 reference issues for single-pass,
 3/6 for Claude adversarial, and 5/6 for cross-provider. Final reference-match
 precision was 100%, 25%, and 22.7%, respectively (2, 12, and 22 unique findings).
 The judge labeled all unmatched findings PLAUSIBLE, not FABRICATED. The cross-provider
@@ -264,3 +264,9 @@ formatting and single-image token accounting). The downstream repair still passe
 and interrupted attempts remain excluded. The two extra findings have not been
 independently adjudicated. Evidence: current `WORK/runs/c-crab/` case's
 `single/{response,score}.json` and `single/execution/` artifacts.
+
+Judge masking limitation: explicit configuration/stage labels are withheld, but
+some finding bodies mention Sonnet, Codex, or Skeptics. Bodies are preserved for
+fidelity, so this is partial masking, not complete blinding. The runbook now
+states this directly. A future held-out evaluation should measure whether
+removing provenance language changes judgments without changing issue content.

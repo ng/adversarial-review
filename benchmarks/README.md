@@ -147,9 +147,11 @@ environment limitations, not defects. This can affect the plugin's depth gate.
 
 ## Scoring and limits on comparisons
 
-The CLI judge sees anonymized candidate bodies, the diff, and reference findings.
-It never sees the producing model, workflow, or before/after label. Identical
-findings share an opaque hash; semantically duplicate findings are grouped.
+The CLI judge sees candidate bodies, the diff, and reference findings. Explicit
+configuration and before/after labels are withheld, and identical findings share
+an opaque hash. Bodies remain unchanged and sometimes mention reviewer models
+or stages, so this is only partial masking, not a fully blinded evaluation.
+Semantically duplicate findings are grouped.
 Each judge response must account for every candidate and use valid reference IDs.
 Incomplete or inconsistent judge output fails scoring rather than receiving
 optimistic fallback labels.
@@ -191,7 +193,7 @@ WORK/runs/BENCH/CASE/VARIANT/
   artifacts/                          Native Optimizer/Skeptic/summary reports
   score.json                          Validated evaluation
   execution/                          c-CRAB patch, image digest, test outputs
-WORK/judges/                          Blind judge prompts, responses, errors
+WORK/judges/                          Judge prompts, responses, errors
 ```
 
 Before calling the experiment finished:
