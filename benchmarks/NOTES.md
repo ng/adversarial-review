@@ -251,3 +251,16 @@ sandbox flag while keeping the outer Seatbelt restrictions. Probe artifacts:
 Completed scope audit: all 584 cases validated. An additional GitHub compare check
 independently confirmed all 50 Martian merge bases. Exact comparison bases and
 input hashes are preserved in `comparison-base-lock.json` for repeat runs.
+
+Source spot-checks of three unmatched Cal.com findings are recorded in
+[ADJUDICATION.md](ADJUDICATION.md). They are assistant static checks, not blinded
+human evaluation. They support separating factual validity from reference match
+and from whether an issue should block the PR.
+
+Corrected c-CRAB baseline: the clean rerun of
+`xorbitsai__inference-2079@5ae18b2` reported two concerns (InternVL prompt-role
+formatting and single-image token accounting). The downstream repair still passed
+0/1 retained executable tests. This is current valid evidence; earlier drifted
+and interrupted attempts remain excluded. The two extra findings have not been
+independently adjudicated. Evidence: current `WORK/runs/c-crab/` case's
+`single/{response,score}.json` and `single/execution/` artifacts.

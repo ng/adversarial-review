@@ -1,6 +1,6 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:07:50.393334+00:00
+Generated: 2026-09-09T10:11:20.365675+00:00
 
 **Status: incomplete until every requested review and evaluation has succeeded.**
 
@@ -9,7 +9,7 @@ Generated: 2026-09-09T10:07:50.393334+00:00
 | martian | 50 | single | 11 | 0 | 10 |
 | martian | 50 | adversarial | 1 | 7 | 1 |
 | martian | 50 | cross-provider | 1 | 7 | 1 |
-| swe-prbench | 350 | single | 4 | 0 | 3 |
+| swe-prbench | 350 | single | 5 | 0 | 4 |
 | swe-prbench | 350 | adversarial | 1 | 0 | 1 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
 | c-crab | 184 | single | 1 | 0 | 1 |
@@ -47,7 +47,7 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 | martian | single | 11 | 219.5 | 13185771 | 213334 |
 | martian | adversarial | 1 | 1023.8 | 6559415 | 97360 |
 | martian | cross-provider | 1 | 1024.5 | 7193592 | 104081 |
-| swe-prbench | single | 4 | 187.6 | 6042168 | 72623 |
+| swe-prbench | single | 5 | 210.8 | 8118771 | 89712 |
 | swe-prbench | adversarial | 1 | 1376.8 | 6936972 | 124165 |
 | swe-prbench | cross-provider | 0 | — | — | — |
 | c-crab | single | 1 | 235.8 | 779392 | 20615 |
