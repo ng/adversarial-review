@@ -353,3 +353,35 @@ with five-hour utilization 1.0, overage disabled, and reset at 11:50 UTC
 (04:50 Pacific). At the checkpoint there were 56 completed reviews and one clean
 review-budget failure. Interrupted/setup attempts remain retryable; no API-key
 fallback was used. The runbook's normal resume commands apply after reset.
+
+## Reproducible evaluation environments
+
+The c-CRAB adapter originally pulled mutable `:latest` image tags separately for
+review configurations. The image tags inspected at this checkpoint had
+consistent image IDs across their recorded uses; no drift was observed. Future
+variants and retries now share immutable digest pins and run the exact local
+Linux/amd64 image ID. The observed pins are checked in; newly encountered
+images are pinned in the experiment workspace on first use.
+
+PR-quality lesson: record the environment identity as well as the source SHA.
+When comparing approaches, verify they used the same inputs and runtime before
+attributing differences to the reviewer. This harness change improves
+reproducibility; it is not evidence that reviewer accuracy improved.
+
+## Next improvement experiments
+
+Keep the current reviewer frozen for this benchmark. Test proposed changes on
+held-out PRs, recording the trigger, supporting source/test evidence, proposed
+change, and success criterion:
+
+- **Check each factual clause:** trace claims about logging, exception handling,
+  and helper behavior into unchanged code. Measure unsupported clauses in a
+  blinded sample, alongside issue recall.
+- **Reserve time for synthesis:** try compact evidence reports within the same
+  runtime cap. Measure completion rate and retained issue coverage together.
+- **Exercise boundary values and dependencies:** include None/False/zero/value
+  matrices for filters and missing-package paths for optional imports. Measure
+  executable bug coverage on held-out cases.
+- **Prioritize actionable findings:** distinguish blocking defects from supported
+  cleanup suggestions. Measure reviewer acceptance and triage effort; unmatched
+  benchmark findings alone do not establish false positives.

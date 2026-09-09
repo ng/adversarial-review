@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "images": {
+    "ghcr.io/c-crab-benchmark/ansible__ansible-20646:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/ansible__ansible-20646:latest",
+      "digest": "ghcr.io/c-crab-benchmark/ansible__ansible-20646@sha256:f2bc1d6bb46a8a5d2952d2757cfeba90a2fde36e3cda50e54f68e10af09a2f14",
+      "id": "sha256:f2bc1d6bb46a8a5d2952d2757cfeba90a2fde36e3cda50e54f68e10af09a2f14"
+    },
+    "ghcr.io/c-crab-benchmark/ansible__ansible-27435:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/ansible__ansible-27435:latest",
+      "digest": "ghcr.io/c-crab-benchmark/ansible__ansible-27435@sha256:45bd54227fee8f4d6c1270f150259773a32e5b5b1f72954fcbc8130024186120",
+      "id": "sha256:45bd54227fee8f4d6c1270f150259773a32e5b5b1f72954fcbc8130024186120"
+    },
+    "ghcr.io/c-crab-benchmark/ccxt__ccxt-14582:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/ccxt__ccxt-14582:latest",
+      "digest": "ghcr.io/c-crab-benchmark/ccxt__ccxt-14582@sha256:6a537577c77870aa494f29c948084a57da17ae0955745506f46477bca1debcb5",
+      "id": "sha256:6a537577c77870aa494f29c948084a57da17ae0955745506f46477bca1debcb5"
+    },
+    "ghcr.io/c-crab-benchmark/ccxt__ccxt-14830:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/ccxt__ccxt-14830:latest",
+      "digest": "ghcr.io/c-crab-benchmark/ccxt__ccxt-14830@sha256:e95ebd76bf15ec9351d9b513b391dfb925fd743e1b811a9b3b127649b51d62c5",
+      "id": "sha256:e95ebd76bf15ec9351d9b513b391dfb925fd743e1b811a9b3b127649b51d62c5"
+    },
+    "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92:latest",
+      "digest": "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92@sha256:70c5ee30ecf6ed60bd4c0b93609759a7e5631c4be2e20772e4d4f7928e45cccc",
+      "id": "sha256:70c5ee30ecf6ed60bd4c0b93609759a7e5631c4be2e20772e4d4f7928e45cccc"
+    },
+    "ghcr.io/c-crab-benchmark/huggingface__accelerate-255:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/huggingface__accelerate-255:latest",
+      "digest": "ghcr.io/c-crab-benchmark/huggingface__accelerate-255@sha256:83c5353486aecbbbbf96f64e0e46fa80f2f9c12e9a48805256d84462da7e4b90",
+      "id": "sha256:83c5353486aecbbbbf96f64e0e46fa80f2f9c12e9a48805256d84462da7e4b90"
+    },
+    "ghcr.io/c-crab-benchmark/manimcommunity__manim-509:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/manimcommunity__manim-509:latest",
+      "digest": "ghcr.io/c-crab-benchmark/manimcommunity__manim-509@sha256:39f697d48a0ccb0dea8cb1a87bb1a01040e217288d12d6d8668e530b597c0c83",
+      "id": "sha256:39f697d48a0ccb0dea8cb1a87bb1a01040e217288d12d6d8668e530b597c0c83"
+    },
+    "ghcr.io/c-crab-benchmark/microsoft__autogen-5843:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/microsoft__autogen-5843:latest",
+      "digest": "ghcr.io/c-crab-benchmark/microsoft__autogen-5843@sha256:7d9eae84390025191b9f5667bf6b8378655f53abd6a216c9cc46cd31bdcc7b0e",
+      "id": "sha256:7d9eae84390025191b9f5667bf6b8378655f53abd6a216c9cc46cd31bdcc7b0e"
+    },
+    "ghcr.io/c-crab-benchmark/pandas-dev__pandas-28802:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/pandas-dev__pandas-28802:latest",
+      "digest": "ghcr.io/c-crab-benchmark/pandas-dev__pandas-28802@sha256:3d57e747625c4fe57f337646bb7f2d3c9d2df1347206b48020ecf344d7f5abec",
+      "id": "sha256:3d57e747625c4fe57f337646bb7f2d3c9d2df1347206b48020ecf344d7f5abec"
+    },
+    "ghcr.io/c-crab-benchmark/posthog__posthog-10293:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/posthog__posthog-10293:latest",
+      "digest": "ghcr.io/c-crab-benchmark/posthog__posthog-10293@sha256:288bccd28ae01178bea36cf66bda1e0964afc94da2e6887e932c490a315621ec",
+      "id": "sha256:288bccd28ae01178bea36cf66bda1e0964afc94da2e6887e932c490a315621ec"
+    },
+    "ghcr.io/c-crab-benchmark/scipy__scipy-20393:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/scipy__scipy-20393:latest",
+      "digest": "ghcr.io/c-crab-benchmark/scipy__scipy-20393@sha256:71e4116397efa54c5bbbff747444ccfc1241249fb0e606d0c0130b01c1dbea55",
+      "id": "sha256:71e4116397efa54c5bbbff747444ccfc1241249fb0e606d0c0130b01c1dbea55"
+    },
+    "ghcr.io/c-crab-benchmark/xorbitsai__inference-2079:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/xorbitsai__inference-2079:latest",
+      "digest": "ghcr.io/c-crab-benchmark/xorbitsai__inference-2079@sha256:02fc531173f33b717fadd469c23abee148eb7f232da840343dd38f4de564c5b9",
+      "id": "sha256:02fc531173f33b717fadd469c23abee148eb7f232da840343dd38f4de564c5b9"
+    }
+  }
+}

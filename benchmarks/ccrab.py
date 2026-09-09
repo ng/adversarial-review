@@ -6,6 +6,7 @@ enters the container. This avoids copying account credentials into benchmark ima
 """
 import argparse
 import concurrent.futures
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,40 @@ from run import CONFIG, ROOT, claude_call, command, read_json, rows, selected, s
 
 def docker(args, timeout=300):
     return command(['docker', *args], timeout=timeout)
+
+
+def pinned_image(work, tag, image_config=None):
+    """Resolve once per experiment, then reuse the exact amd64 image."""
+    directory = work / 'metadata/docker-images'
+    directory.mkdir(parents=True, exist_ok=True)
+    key = tag.rsplit('/', 1)[-1].replace(':', '_')
+    path = directory / (key + '.json')
+    with (directory / (key + '.lock')).open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        shipped = read_json(ROOT / 'benchmarks/docker-image-lock.json')['images'].get(tag)
+        pin = read_json(path) if path.exists() else shipped
+        if shipped and pin != shipped:
+            raise ValueError('Workspace Docker image pin differs from checked-in pin')
+        reference = pin['digest'] if pin else tag
+        pull_args = ['docker']
+        if image_config:
+            pull_args += ['--config', str(image_config)]
+        command([*pull_args, 'pull', '--platform', 'linux/amd64', reference], timeout=1800)
+        meta = json.loads(docker(['image', 'inspect', reference]))[0]
+        if meta.get('Architecture') != 'amd64' or meta.get('Os') != 'linux':
+            raise ValueError('Benchmark requires a Linux/amd64 image')
+        prefix = tag.rsplit(':', 1)[0] + '@sha256:'
+        digests = [d for d in meta.get('RepoDigests', []) if d.startswith(prefix)]
+        if pin:
+            if meta['Id'] != pin['id'] or pin['digest'] not in digests:
+                raise ValueError('Pulled Docker image does not match experiment pin')
+        else:
+            if len(digests) != 1:
+                raise ValueError('Cannot identify unique immutable Docker image digest')
+            pin = {'tag': tag, 'digest': digests[0], 'id': meta['Id']}
+        write_json(path, pin)
+        return {'image': tag, 'id': pin['id'], 'digests': digests,
+                'pinned_digest': pin['digest'], 'platform': 'linux/amd64'}
 
 
 @lru_cache(maxsize=4)
@@ -54,14 +89,8 @@ def evaluate(work, case, variant, image_config=None):
     try:
         entries = test_entries(work, case)
         image = f'ghcr.io/c-crab-benchmark/{case["id"].split("@")[0].lower()}:latest'
-        pull_args = ['docker']
-        if image_config:
-            pull_args += ['--config', str(image_config)]
-        pull_args += ['pull', '--platform', 'linux/amd64', image]
-        command(pull_args, timeout=1800)
-        image_meta = json.loads(docker(['image', 'inspect', image]))[0]
-        write_json(out / 'image.json', {'image': image, 'id': image_meta['Id'],
-                                       'digests': image_meta.get('RepoDigests', [])})
+        image_meta = pinned_image(work, image, image_config)
+        write_json(out / 'image.json', image_meta)
         source = snapshot(work, case)
         directory = work / 'fix-workspaces/c-crab' / case['id'] / variant
         if not directory.exists():
@@ -86,7 +115,7 @@ Return JSON with a summary string after editing source.'''
         from pipeline.agent_resolver import verify_with_test
         name = 'adversarial-benchmark-' + uuid.uuid4().hex[:12]
         tests = []
-        with DockerContainerSession(image, name=name) as session:
+        with DockerContainerSession(image_meta['id'], name=name) as session:
             reset = session.run_command(['git', 'checkout', '--force', case['head']], timeout=120)
             if reset.returncode:
                 raise RuntimeError('Container cannot check out frozen head: ' + reset.stderr[-1000:])

@@ -260,3 +260,13 @@ resume reuses those artifacts and reruns only the tool-free normalization step.
 The original native transcript remains unchanged; failed normalization attempts
 are archived separately. This avoids generating a new review merely because a
 formatting or subscription interruption occurred afterward.
+
+### Immutable c-CRAB images
+
+`docker-image-lock.json` records the observed image pins. The adapter
+uses these digest references, verifies Linux/amd64 and the expected image ID,
+and starts containers by exact local image ID. For additional cases it resolves
+the upstream tag once and saves a shared pin under
+`WORK/metadata/docker-images/`; retain that directory with the run artifacts to
+reproduce the environment. All configurations and retries reuse the shared pin.
+A pin mismatch is an evaluation failure, never an automatic image update.

@@ -9,6 +9,29 @@ from unittest.mock import patch
 
 from run import command, rows, subscription_env, reviewer_sandbox, subscription_guard, record_subscription_limit, SubscriptionLimit, comparison_base, _review
 from score import metrics, validate_labels
+from ccrab import pinned_image
+
+
+class ImagePinTests(unittest.TestCase):
+    def test_resume_uses_digest_and_rejects_changed_image(self):
+        tag = 'ghcr.io/c-crab-benchmark/test-only:latest'
+        digest = tag.rsplit(':', 1)[0] + '@sha256:abc'
+        meta = {'Id': 'sha256:123', 'RepoDigests': [digest],
+                'Architecture': 'amd64', 'Os': 'linux'}
+        with tempfile.TemporaryDirectory() as tmp, \
+                patch('ccrab.command') as pull, \
+                patch('ccrab.docker', return_value=json.dumps([meta])) as inspect:
+            work = Path(tmp)
+            first = pinned_image(work, tag)
+            self.assertEqual(pull.call_args.args[0][-1], tag)
+            self.assertEqual(pinned_image(work, tag), first)
+            self.assertEqual(pull.call_args.args[0][-1], digest)
+            inspect.return_value = json.dumps([{**meta, 'Id': 'sha256:changed'}])
+            with self.assertRaisesRegex(ValueError, 'does not match'):
+                pinned_image(work, tag)
+            inspect.return_value = json.dumps([{**meta, 'Architecture': 'arm64'}])
+            with self.assertRaisesRegex(ValueError, 'Linux/amd64'):
+                pinned_image(work, tag)
 
 
 class AccountingTests(unittest.TestCase):
