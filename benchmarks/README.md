@@ -254,3 +254,9 @@ Normal resume commands preserve that outcome. Setup faults and judge/normalizer
 failures are distinct and remain eligible for repair/retry. Full-run completion
 still requires all 1,752 planned trials to be accounted for; budget failures must
 remain visible alongside quality metrics conditioned on successful evaluation.
+
+If native review artifacts and usage were completed before normalization failed,
+resume reuses those artifacts and reruns only the tool-free normalization step.
+The original native transcript remains unchanged; failed normalization attempts
+are archived separately. This avoids generating a new review merely because a
+formatting or subscription interruption occurred afterward.

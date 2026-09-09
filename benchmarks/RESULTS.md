@@ -1,20 +1,20 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:39:28.601988+00:00
+Generated: 2026-09-09T10:57:12.452932+00:00
 
-**Status: incomplete until every requested review and evaluation has succeeded.**
+**Status: Claude model calls paused by the subscription limit until 2026-09-09T11:50:00+00:00. The full experiment is incomplete.**
 
-| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |
+| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 16 | 0 | 15 |
-| martian | 50 | adversarial | 2 | 6 | 1 |
-| martian | 50 | cross-provider | 2 | 6 | 2 |
-| swe-prbench | 350 | single | 10 | 0 | 9 |
-| swe-prbench | 350 | adversarial | 2 | 0 | 2 |
+| martian | 50 | single | 18 | 1 | 17 |
+| martian | 50 | adversarial | 2 | 7 | 2 |
+| martian | 50 | cross-provider | 2 | 7 | 2 |
+| swe-prbench | 350 | single | 13 | 1 | 12 |
+| swe-prbench | 350 | adversarial | 3 | 1 | 3 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 11 | 0 | 4 |
-| c-crab | 184 | adversarial | 2 | 0 | 1 |
-| c-crab | 184 | cross-provider | 1 | 0 | 0 |
+| c-crab | 184 | single | 15 | 1 | 4 |
+| c-crab | 184 | adversarial | 2 | 1 | 2 |
+| c-crab | 184 | cross-provider | 1 | 1 | 1 |
 
 ## Quality on paired completed cases
 
@@ -33,7 +33,9 @@ Scores use the adapted evaluation described in the runbook; they are not publish
 | martian/core | 1 | cross-provider | 22.7% | 83.3% | 35.7% | 0 | -4 |
 | martian/all | 1 | cross-provider | 22.7% | 83.3% | 35.7% | 0 | -4 |
 | swe-prbench | 0 | All | — | — | — | — | — |
-| c-crab | 0 | All | — | — | — | — | — |
+| c-crab test pass rate (macro) | 1 | single | — | 0.0% | — | — | — |
+| c-crab test pass rate (macro) | 1 | adversarial | — | 0.0% | — | — | — |
+| c-crab test pass rate (macro) | 1 | cross-provider | — | 0.0% | — | — | — |
 
 ## Observed review resource use
 
@@ -44,13 +46,13 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 
 | Benchmark | Configuration | Completed reviews | Median seconds | Claude input tokens (incl. cache) | Claude output tokens |
 |---|---|---:|---:|---:|---:|
-| martian | single | 16 | 241.9 | 17844605 | 317753 |
+| martian | single | 18 | 268.4 | 22729807 | 378842 |
 | martian | adversarial | 2 | 830.0 | 9274218 | 143918 |
 | martian | cross-provider | 2 | 1324.9 | 14999034 | 307391 |
-| swe-prbench | single | 10 | 222.8 | 16741408 | 206469 |
-| swe-prbench | adversarial | 2 | 969.1 | 10414857 | 175420 |
+| swe-prbench | single | 13 | 226.2 | 22299177 | 268583 |
+| swe-prbench | adversarial | 3 | 727.9 | 14286609 | 232775 |
 | swe-prbench | cross-provider | 0 | — | — | — |
-| c-crab | single | 11 | 167.9 | 9917838 | 160949 |
+| c-crab | single | 15 | 146.0 | 13573309 | 208107 |
 | c-crab | adversarial | 2 | 932.2 | 8305615 | 178729 |
 | c-crab | cross-provider | 1 | 1187.5 | 8143761 | 123573 |
 
@@ -72,6 +74,7 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 ## Failures
 
+- `martian/calcom__cal.com-10967/single`: Subscription rejected this request; batch paused without API fallback.
 - `martian/ai-code-review-evaluation__discourse-graphite-10/adversarial`: Review timed out; partial output retained, excluded from quality scores.
 - `martian/ai-code-review-evaluation__discourse-graphite-3/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object e25638dab0d4b98f99c8fe8976ccaae8f4fb9db3
 
@@ -79,10 +82,12 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 - `martian/getsentry__sentry-80168/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bdd229e3f22e307fe40b30ef99e92ff3f6723da4
 
+- `martian/ai-code-review-evaluation__sentry-greptile-2/adversarial`: Subscription rejected this request; batch paused without API fallback.
 - `martian/grafana__grafana-80329/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object a886bd3c79a417a70b51509384d1f1ec3e87e96b
 
 - `martian/ai-code-review-evaluation__keycloak-greptile-1/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 30f804af450dec523909a52f2a4b97302d27f5cc
 
+- `martian/ai-code-review-evaluation__discourse-graphite-3/cross-provider`: Subscription rejected this request; batch paused without API fallback.
 - `martian/getsentry__sentry-77754/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bb5a6837cb5b3d8d3b174e17d42ec14486ef8738
 
 - `martian/calcom__cal.com-11059/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bc89fe00ea84d20bedcec782f0701b9711dc8201
@@ -95,4 +100,9 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 - `martian/ai-code-review-evaluation__keycloak-greptile-1/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 30f804af450dec523909a52f2a4b97302d27f5cc
 
-- `swe-prbench/server__8570/cross-provider`: Pilot stopped: verified artifact-write permission mismatch; full native mini model unavailable with ChatGPT login. Raw attempt retained.
+- `swe-prbench/chia-blockchain__19848/single`: Subscription rejected this request; batch paused without API fallback.
+- `swe-prbench/pipecat__3084/adversarial`: Subscription rejected this request; batch paused without API fallback.
+- `swe-prbench/server__8570/cross-provider`: Subscription rejected this request; batch paused without API fallback.
+- `c-crab/zulip__zulip-25349@67de2a4/single`: Subscription rejected this request; batch paused without API fallback.
+- `c-crab/ansible__ansible-27435@da1a331/adversarial`: Subscription rejected this request; batch paused without API fallback.
+- `c-crab/deepset-ai__haystack-92@accd8b1/cross-provider`: Subscription rejected this request; batch paused without API fallback.

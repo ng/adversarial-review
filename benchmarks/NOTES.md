@@ -341,3 +341,15 @@ budget failure excludes this PR from the three-way successful-case table, while
 these two successful configurations remain directly comparable on this case.
 Evidence: `WORK/runs/martian/ai-code-review-evaluation__discourse-graphite-10/`
 `{single,cross-provider}/score.json`.
+
+First corrected c-CRAB three-way result: single-pass, Claude adversarial, and
+cross-provider all yielded 0/1 retained tests passing on
+`xorbitsai__inference-2079@5ae18b2`. Final finding counts were 2, 16, and 19.
+This measures coverage of the retained optional-import test; it does not classify
+all additional findings as false.
+
+Subscription checkpoint: Claude rejected new requests at 2026-09-09 10:50 UTC
+with five-hour utilization 1.0, overage disabled, and reset at 11:50 UTC
+(04:50 Pacific). At the checkpoint there were 56 completed reviews and one clean
+review-budget failure. Interrupted/setup attempts remain retryable; no API-key
+fallback was used. The runbook's normal resume commands apply after reset.

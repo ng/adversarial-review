@@ -83,6 +83,33 @@ class SubscriptionLimitTests(unittest.TestCase):
 
 
 class OutcomeTests(unittest.TestCase):
+    def test_normalization_retry_preserves_native_review(self):
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            case = {'benchmark': 'test', 'id': 'case', 'input_hash': 'frozen'}
+            out = work / 'runs/test/case/adversarial'
+            (out / 'artifacts').mkdir(parents=True)
+            (out / 'extraction').mkdir()
+            (out / 'native-result.json').write_text('{}')
+            (out / 'usage.json').write_text(json.dumps({'subagent_stats': {'spawned': 2}}))
+            (out / 'events.jsonl').write_text('original native trace')
+            (out / 'extraction/events.jsonl').write_text('failed normalization trace')
+            for name in ['summary.md', 'optimizer-merged.md', 'skeptic-merged.md']:
+                (out / 'artifacts' / name).write_text('frozen review artifact')
+            (out / 'status.json').write_text(json.dumps({'status': 'failed',
+                'stage': 'normalization', 'input_hash': 'frozen'}))
+            response = {'findings': [], 'optimizer_findings': [], 'depth': 'standard'}
+            with patch('run.snapshot') as snapshot, patch('run.claude_call', return_value=response) as call:
+                _review(work, case, 'adversarial')
+                snapshot.assert_not_called()
+                call.assert_called_once()
+                self.assertFalse(call.call_args.kwargs.get('tools', False))
+            self.assertEqual((out / 'events.jsonl').read_text(), 'original native trace')
+            archived = list((out / 'extraction/attempts').glob('*/events.jsonl'))
+            self.assertEqual(len(archived), 1)
+            self.assertEqual(archived[0].read_text(), 'failed normalization trace')
+            self.assertEqual(json.loads((out / 'status.json').read_text())['status'], 'complete')
+
     def test_resume_preserves_budget_outcome_but_retries_setup_failure(self):
         with tempfile.TemporaryDirectory() as d:
             work = Path(d)
