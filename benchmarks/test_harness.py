@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from run import command, rows, subscription_env, reviewer_sandbox, subscription_guard, record_subscription_limit, SubscriptionLimit, comparison_base
+from run import command, rows, subscription_env, reviewer_sandbox, subscription_guard, record_subscription_limit, SubscriptionLimit, comparison_base, _review
 from score import metrics, validate_labels
 
 
@@ -80,6 +80,27 @@ class SubscriptionLimitTests(unittest.TestCase):
                 subscription_guard(out)
             marker.write_text(json.dumps({'retry_after': 1}))
             self.assertEqual(subscription_guard(out), marker)
+
+
+class OutcomeTests(unittest.TestCase):
+    def test_resume_preserves_budget_outcome_but_retries_setup_failure(self):
+        with tempfile.TemporaryDirectory() as d:
+            work = Path(d)
+            case = {'benchmark': 'test', 'id': 'case', 'input_hash': 'frozen'}
+            out = work / 'runs/test/case/single'
+            out.mkdir(parents=True)
+            status = out / 'status.json'
+            status.write_text(json.dumps({'status': 'failed', 'terminal': True,
+                                          'input_hash': 'frozen'}))
+            with patch('run.snapshot') as snapshot:
+                _review(work, case, 'single')
+                snapshot.assert_not_called()
+            status.write_text(json.dumps({'status': 'failed', 'terminal': False,
+                                          'input_hash': 'frozen'}))
+            with patch('run.snapshot', side_effect=RuntimeError('fixture setup unavailable')) as snapshot:
+                _review(work, case, 'single')
+                snapshot.assert_called_once()
+            self.assertFalse(json.loads(status.read_text())['terminal'])
 
 
 class IsolationTests(unittest.TestCase):

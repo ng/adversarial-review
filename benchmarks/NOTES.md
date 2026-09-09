@@ -270,3 +270,20 @@ some finding bodies mention Sonnet, Codex, or Skeptics. Bodies are preserved for
 fidelity, so this is partial masking, not complete blinding. The runbook now
 states this directly. A future held-out evaluation should measure whether
 removing provenance language changes judgments without changing issue content.
+
+First corrected c-CRAB two-way result: both single-pass (2 final findings) and
+Claude adversarial (15 Optimizer candidates, 16 final findings) yielded 0/1
+retained tests passing after the same downstream repair setup. The native review
+completed two independent subagents at standard depth in 890 seconds, excluding
+normalization and execution scoring. Neither final report mentioned the retained
+AutoTokenizer import issue. Additional finding volume did not improve this
+case's executable coverage; this does not establish that the extra findings are
+false. Cross-provider scoring is still pending.
+
+Budget outcome: the protected Claude adversarial review of
+`martian/ai-code-review-evaluation__discourse-graphite-10` hit the declared
+1,800-second cap while finishing its artifacts. Preserve this as a terminal
+review-budget failure; partial output is excluded from quality metrics. Do not
+retry clean budget failures until a favorable outcome appears. This keeps the
+full 1,752-trial scope while distinguishing model-budget outcomes from repairable
+setup errors. Cross-provider and single-pass results remain separately recorded.

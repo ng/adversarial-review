@@ -1,19 +1,19 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:16:23.360722+00:00
+Generated: 2026-09-09T10:28:45.127457+00:00
 
-**Status: incomplete until every requested review and evaluation has succeeded.**
+**Status: in progress; all planned trials require recorded outcomes and successful reviews require evaluation.**
 
-| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |
+| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 12 | 0 | 11 |
+| martian | 50 | single | 14 | 0 | 12 |
 | martian | 50 | adversarial | 1 | 7 | 1 |
 | martian | 50 | cross-provider | 1 | 7 | 1 |
-| swe-prbench | 350 | single | 5 | 0 | 5 |
-| swe-prbench | 350 | adversarial | 1 | 0 | 1 |
+| swe-prbench | 350 | single | 8 | 0 | 6 |
+| swe-prbench | 350 | adversarial | 2 | 0 | 1 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 2 | 0 | 1 |
-| c-crab | 184 | adversarial | 1 | 0 | 0 |
+| c-crab | 184 | single | 6 | 0 | 4 |
+| c-crab | 184 | adversarial | 1 | 0 | 1 |
 | c-crab | 184 | cross-provider | 0 | 0 | 0 |
 
 ## Quality on paired completed cases
@@ -44,13 +44,13 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 
 | Benchmark | Configuration | Completed reviews | Median seconds | Claude input tokens (incl. cache) | Claude output tokens |
 |---|---|---:|---:|---:|---:|
-| martian | single | 12 | 226.6 | 14124768 | 233515 |
+| martian | single | 14 | 241.9 | 16533537 | 274113 |
 | martian | adversarial | 1 | 1023.8 | 6559415 | 97360 |
 | martian | cross-provider | 1 | 1024.5 | 7193592 | 104081 |
-| swe-prbench | single | 5 | 210.8 | 8118771 | 89712 |
-| swe-prbench | adversarial | 1 | 1376.8 | 6936972 | 124165 |
+| swe-prbench | single | 8 | 215.1 | 13742028 | 148047 |
+| swe-prbench | adversarial | 2 | 969.1 | 10414857 | 175420 |
 | swe-prbench | cross-provider | 0 | — | — | — |
-| c-crab | single | 2 | 201.9 | 1630526 | 36364 |
+| c-crab | single | 6 | 192.0 | 5537518 | 104766 |
 | c-crab | adversarial | 1 | 889.9 | 5229126 | 84952 |
 | c-crab | cross-provider | 0 | — | — | — |
 
@@ -72,9 +72,8 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 ## Failures
 
+- `martian/ai-code-review-evaluation__discourse-graphite-10/adversarial`: Review timed out; partial output retained, excluded from quality scores.
 - `martian/ai-code-review-evaluation__discourse-graphite-3/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object e25638dab0d4b98f99c8fe8976ccaae8f4fb9db3
-
-- `martian/getsentry__sentry-77754/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bb5a6837cb5b3d8d3b174e17d42ec14486ef8738
 
 - `martian/calcom__cal.com-11059/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bc89fe00ea84d20bedcec782f0701b9711dc8201
 

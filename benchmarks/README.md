@@ -199,8 +199,10 @@ WORK/judges/                          Judge prompts, responses, errors
 Before calling the experiment finished:
 
 1. Verify 50 + 350 + 184 cases, each with all three configurations: **1,752 reviews**.
-2. Verify every review completed with the required native lanes and no source
-   changes or reference-answer access. Inspect actual model/depth/permission data.
+2. Account for every trial as a validated completed review or a recorded model
+   budget failure. Retry infrastructure/setup faults. Successful native reviews
+   require the specified lanes, no source changes, and no reference-answer access.
+   Inspect actual model/depth/permission data.
 3. Verify every successful review is scored; distinguish environment failures
    from benchmark failures. Do not silently drop cases to improve scores.
 4. Compare configurations on the same completed cases and disclose missingness.
@@ -242,3 +244,13 @@ harness's inherited Seatbelt profile**, which still restricts reference-data
 reads and source writes. Do not copy that flag into a standalone unprotected
 review command. A probe verified an actual shell read under the outer sandbox;
 CLI startup or exit status alone is insufficient evidence of tool functionality.
+
+### Review budget outcomes
+
+The declared 1,800-second review cap is part of the experiment. A clean review
+that reaches that cap is a recorded terminal budget failure, not an empty
+successful review and not a reason to resample the reviewer until it succeeds.
+Normal resume commands preserve that outcome. Setup faults and judge/normalizer
+failures are distinct and remain eligible for repair/retry. Full-run completion
+still requires all 1,752 planned trials to be accounted for; budget failures must
+remain visible alongside quality metrics conditioned on successful evaluation.

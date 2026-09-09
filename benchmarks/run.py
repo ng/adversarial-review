@@ -321,6 +321,10 @@ REVIEW_SCHEMA = {'type': 'object', 'properties': {
     'required': ['findings', 'optimizer_findings', 'depth', 'notes'], 'additionalProperties': False}
 
 
+class CallTimeout(RuntimeError):
+    pass
+
+
 class SubscriptionLimit(RuntimeError):
     pass
 
@@ -397,7 +401,7 @@ def claude_call(prompt, directory, out, model, schema, tools=False, plugin=None,
         except subprocess.TimeoutExpired:
             os.killpg(proc.pid, signal.SIGTERM)
             proc.wait(timeout=20)
-            raise RuntimeError('Review timed out; partial output retained, excluded from quality scores.')
+            raise CallTimeout('Call timed out at the declared limit; partial output retained, excluded from quality scores.')
     events = [json.loads(s) for s in (out / 'events.jsonl').read_text().split('\n') if s.startswith('{')]
     result = next((x for x in reversed(events) if x.get('type') == 'result'), None)
     if proc.returncode or not result or result.get('is_error') or result.get('subtype') != 'success':
@@ -431,7 +435,7 @@ def _review(work, case, variant):
     out = work / 'runs' / case['benchmark'] / case['id'] / variant
     status = out / 'status.json'
     subscription_guard(out)
-    if status.exists() and read_json(status).get('status') == 'complete':
+    if status.exists() and (read_json(status).get('status') == 'complete' or read_json(status).get('terminal')):
         if read_json(status).get('input_hash') != case['input_hash']:
             raise RuntimeError('Completed review input hash differs; use a new experiment workspace.')
         return
@@ -443,6 +447,7 @@ def _review(work, case, variant):
             if entry.name not in ['attempts', '.lock']:
                 shutil.move(str(entry), str(archive / entry.name))
     write_json(status, {'status': 'running', 'input_hash': case['input_hash']})
+    stage = 'preparation'
     try:
         source = snapshot(work, case)
         effective_base = comparison_base(work, case)
@@ -491,8 +496,10 @@ Budget: maximum {CONFIG['timeout_seconds']} seconds and ${CONFIG['max_budget_usd
                 prompt += '\nFor each Codex sidecar invocation use codex exec --ignore-user-config --ephemeral -m gpt-5.5 --sandbox danger-full-access (plus its normal phase arguments). The whole process tree already runs inside the harness OS sandbox; this flag disables only the incompatible nested Codex sandbox. Override the skill default --sandbox read-only, which fails with sandbox_apply under the inherited sandbox. The outer sandbox still denies reference-data reads and source writes. gpt-5.5 was verified available with this account. Do not substitute models or load user configuration. Put sidecar prompt and output files under .reviews/benchmark in this workspace, never a shared /tmp filename.\n'
             prompt += '\nFor this native run, the normal Markdown artifacts are the final deliverable; a separate extraction process will normalize them afterward. Do not stop after the Optimizer. Wait for every required background task using TaskOutput, run the Skeptic wave, and write summary.md before ending. Do not use a scheduling tool or end with a waiting message. The independent Skeptic is required even if you already checked findings yourself.\n'
             plugin = work / 'plugin'
+        stage = 'generating_review'
         data = claude_call(prompt, directory, out, CONFIG['review_model'],
                            REVIEW_SCHEMA if variant == 'single' else None, True, plugin)
+        stage = 'validating_review'
         if command(['git', 'diff', 'HEAD'], directory):
             raise RuntimeError('Reviewer modified tracked source. Result excluded.')
         if command(['git', 'rev-parse', 'HEAD'], directory) != case['head']:
@@ -515,6 +522,7 @@ findings: distinct introduced issues recommended in the final summary, excluding
 and pre-existing items. optimizer_findings: all distinct pre-Skeptic candidates from the Optimizer reports.
 Preserve a stable ID across before/after when the underlying issue is the same. Include trigger and rationale
 in body. Report the actual depth and any missing/degraded stages in notes. Return JSON only.\n'''
+            stage = 'normalization'
             data = claude_call(extraction + json.dumps(content), work / 'probe', out / 'extraction',
                                CONFIG['review_model'], REVIEW_SCHEMA)
             write_json(out / 'response.json', data)
@@ -536,7 +544,8 @@ in body. Report the actual depth and any missing/degraded stages in notes. Retur
         write_json(status, {'status': 'complete', 'input_hash': case['input_hash']})
         print(f'COMPLETE {case["benchmark"]} {case["id"]} {variant}: {len(data["findings"])} findings', flush=True)
     except Exception as exc:
-        write_json(status, {'status': 'failed', 'error': str(exc), 'input_hash': case['input_hash']})
+        write_json(status, {'status': 'failed', 'error': str(exc), 'input_hash': case['input_hash'],
+                            'stage': stage, 'terminal': isinstance(exc, CallTimeout) and stage == 'generating_review'})
         print(f'FAILED {case["id"]} {variant}: {exc}', flush=True)
         if isinstance(exc, SubscriptionLimit):
             raise
@@ -546,8 +555,8 @@ def report(work, destination):
     cases = read_json(work / 'cases.json') if (work / 'cases.json').exists() else []
     lines = ['# Adversarial reviewer benchmark results', '',
              f'Generated: {datetime.now(timezone.utc).isoformat()}', '',
-             '**Status: incomplete until every requested review and evaluation has succeeded.**', '',
-             '| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |',
+             '**Status: in progress; all planned trials require recorded outcomes and successful reviews require evaluation.**', '',
+             '| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |',
              '|---|---:|---|---:|---:|---:|']
     failures = []
     for benchmark in CONFIG['benchmarks']:
