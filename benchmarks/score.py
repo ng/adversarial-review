@@ -133,8 +133,8 @@ def score_case(work, case):
     candidates = dict(sorted(candidates.items()))
     payload = {'diff': case.get('diff') or '', 'gold': case['gold'], 'candidates': list(candidates.values())}
     if not payload['diff']:
-        from run import command, snapshot
-        payload['diff'] = command(['git', 'diff', case['base'], case['head']], snapshot(work, case))
+        from run import command, snapshot, comparison_base
+        payload['diff'] = command(['git', 'diff', comparison_base(work, case), case['head']], snapshot(work, case))
     payload_hash = digest(json.dumps(payload, sort_keys=True) + JUDGE + CONFIG['judge_model'])
     judge_dir = work / 'judges' / case['benchmark'] / case['id'] / payload_hash[:16]
     response = judge_dir / 'response.json'

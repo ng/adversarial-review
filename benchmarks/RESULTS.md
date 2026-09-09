@@ -1,18 +1,18 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:00:59.640811+00:00
+Generated: 2026-09-09T10:07:50.393334+00:00
 
 **Status: incomplete until every requested review and evaluation has succeeded.**
 
 | Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 10 | 0 | 9 |
+| martian | 50 | single | 11 | 0 | 10 |
 | martian | 50 | adversarial | 1 | 7 | 1 |
-| martian | 50 | cross-provider | 1 | 8 | 1 |
-| swe-prbench | 350 | single | 2 | 1 | 1 |
+| martian | 50 | cross-provider | 1 | 7 | 1 |
+| swe-prbench | 350 | single | 4 | 0 | 3 |
 | swe-prbench | 350 | adversarial | 1 | 0 | 1 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 0 | 0 | 0 |
+| c-crab | 184 | single | 1 | 0 | 1 |
 | c-crab | 184 | adversarial | 0 | 0 | 0 |
 | c-crab | 184 | cross-provider | 0 | 0 | 0 |
 
@@ -44,13 +44,13 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 
 | Benchmark | Configuration | Completed reviews | Median seconds | Claude input tokens (incl. cache) | Claude output tokens |
 |---|---|---:|---:|---:|---:|
-| martian | single | 10 | 204.2 | 9744991 | 178629 |
+| martian | single | 11 | 219.5 | 13185771 | 213334 |
 | martian | adversarial | 1 | 1023.8 | 6559415 | 97360 |
 | martian | cross-provider | 1 | 1024.5 | 7193592 | 104081 |
-| swe-prbench | single | 2 | 187.6 | 1810978 | 32995 |
+| swe-prbench | single | 4 | 187.6 | 6042168 | 72623 |
 | swe-prbench | adversarial | 1 | 1376.8 | 6936972 | 124165 |
 | swe-prbench | cross-provider | 0 | — | — | — |
-| c-crab | single | 0 | — | — | — |
+| c-crab | single | 1 | 235.8 | 779392 | 20615 |
 | c-crab | adversarial | 0 | — | — | — |
 | c-crab | cross-provider | 0 | — | — | — |
 
@@ -86,8 +86,6 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 - `martian/ai-code-review-evaluation__keycloak-greptile-1/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 30f804af450dec523909a52f2a4b97302d27f5cc
 
-- `martian/ai-code-review-evaluation__discourse-graphite-10/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 913c3d6f636d02b3dd6c2c022ca1af2bec95d752
-
 - `martian/ai-code-review-evaluation__discourse-graphite-3/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object e25638dab0d4b98f99c8fe8976ccaae8f4fb9db3
 
 - `martian/getsentry__sentry-77754/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bb5a6837cb5b3d8d3b174e17d42ec14486ef8738
@@ -102,5 +100,4 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 - `martian/ai-code-review-evaluation__keycloak-greptile-1/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 30f804af450dec523909a52f2a4b97302d27f5cc
 
-- `swe-prbench/pipecat__3084/single`: Interrupted for benchmark scope audit; prior runner used unresolved dataset endpoints. Rerun after merge-base validation.
 - `swe-prbench/server__8570/cross-provider`: Pilot stopped: verified artifact-write permission mismatch; full native mini model unavailable with ChatGPT login. Raw attempt retained.

@@ -226,3 +226,17 @@ per-case result; investigate failed scopes rather than scoring a different diff.
 The review runner performs the same check lazily if it has not been precomputed.
 Earlier direct-endpoint pilots with unrelated branch drift are excluded and
 retained under `WORK/excluded-pilots/`.
+
+`comparison-base-lock.json` records all 584 resolved bases and their input hashes.
+Fresh runs reuse these verified pins, avoiding repeated deep history fetches.
+Every supplied SWE-PRBench/c-CRAB patch was checked against the exact head tree;
+Martian bases were resolved from Git ancestry. A changed input hash is rejected.
+
+### Nested Codex runtime
+
+macOS rejects Codex's nested sandbox with `sandbox_apply: Operation not permitted`.
+The protected sidecar therefore uses `--sandbox danger-full-access` **inside the
+harness's inherited Seatbelt profile**, which still restricts reference-data
+reads and source writes. Do not copy that flag into a standalone unprotected
+review command. A probe verified an actual shell read under the outer sandbox;
+CLI startup or exit status alone is insufficient evidence of tool functionality.

@@ -240,3 +240,14 @@ history resolves the intended base. Validation now applies text changes to a
 separate Git index and compares the full resulting tree to head; binary payloads
 omitted by the release come from the pinned head after checking file operations.
 This distinguishes formatting/binary omissions from real scope mismatches.
+
+Nested-sandbox observation: the restricted Codex CLI started successfully but
+could not run shell tools (`sandbox_apply: Operation not permitted`). An actual
+nonce-file read succeeded when Codex relied on the inherited outer sandbox.
+The cross-provider prompt now explicitly overrides the plugin's inner read-only
+sandbox flag while keeping the outer Seatbelt restrictions. Probe artifacts:
+`WORK/probe/{protected-codex-shell,codex-outer-sandbox}/events.jsonl`.
+
+Completed scope audit: all 584 cases validated. An additional GitHub compare check
+independently confirmed all 50 Martian merge bases. Exact comparison bases and
+input hashes are preserved in `comparison-base-lock.json` for repeat runs.

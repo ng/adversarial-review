@@ -251,6 +251,13 @@ def _comparison_base(work, case):
         if saved['input_hash'] != case['input_hash']:
             raise RuntimeError('Cached comparison base has different inputs.')
         return saved['merge_base']
+    pins = ROOT / 'benchmarks/comparison-base-lock.json'
+    pinned = read_json(pins).get('cases', {}).get(case['benchmark'] + '/' + case['id']) if pins.exists() else None
+    if pinned:
+        if pinned['input_hash'] != case['input_hash'] or pinned['head'] != case['head'] or pinned['dataset_base'] != case['base']:
+            raise RuntimeError('Checked-in comparison scope has different inputs.')
+        write_json(meta, pinned)
+        return pinned['merge_base']
     history = work / 'source-history' / case['benchmark'] / case['id']
     history.mkdir(parents=True, exist_ok=True)
     command(['git', 'init', '-q', str(history)])
@@ -481,7 +488,7 @@ Budget: maximum {CONFIG['timeout_seconds']} seconds and ${CONFIG['max_budget_usd
             flag = '--no-codex' if variant == 'adversarial' else CONFIG['cross_provider_flag']
             prompt = preamble + f'\nInvoke /adversarial-review:run --no-fix {flag}. Follow its full depth selection, Optimizer, Skeptic and synthesis workflow, subject to the frozen-input overrides above. Delegate agents as the skill specifies. For cross-provider codex calls use the installed signed-in CLI. Preserve all raw .reviews artifacts. Missing required reviewer lanes is a failed run, not a Claude-only fallback.\n'
             if variant == 'cross-provider':
-                prompt += '\nFor each Codex sidecar invocation use codex exec --ignore-user-config --ephemeral -m gpt-5.5 (plus its normal phase arguments). gpt-5.5 was verified available with this account. Do not substitute models or load user configuration. Put sidecar prompt and output files under .reviews/benchmark in this workspace, never a shared /tmp filename.\n'
+                prompt += '\nFor each Codex sidecar invocation use codex exec --ignore-user-config --ephemeral -m gpt-5.5 --sandbox danger-full-access (plus its normal phase arguments). The whole process tree already runs inside the harness OS sandbox; this flag disables only the incompatible nested Codex sandbox. Override the skill default --sandbox read-only, which fails with sandbox_apply under the inherited sandbox. The outer sandbox still denies reference-data reads and source writes. gpt-5.5 was verified available with this account. Do not substitute models or load user configuration. Put sidecar prompt and output files under .reviews/benchmark in this workspace, never a shared /tmp filename.\n'
             prompt += '\nFor this native run, the normal Markdown artifacts are the final deliverable; a separate extraction process will normalize them afterward. Do not stop after the Optimizer. Wait for every required background task using TaskOutput, run the Skeptic wave, and write summary.md before ending. Do not use a scheduling tool or end with a waiting message. The independent Skeptic is required even if you already checked findings yourself.\n'
             plugin = work / 'plugin'
         data = claude_call(prompt, directory, out, CONFIG['review_model'],
@@ -516,8 +523,14 @@ in body. Report the actual depth and any missing/degraded stages in notes. Retur
                 raise RuntimeError('Fewer than two native subagents ran; independent Optimizer/Skeptic workflow unverified.')
             if not skipped and (not any(n.startswith('optimizer-') for n in names) or not any(n.startswith('skeptic-') for n in names)):
                 raise RuntimeError('Native Optimizer/Skeptic artifacts missing. Result excluded.')
-            if variant == 'cross-provider' and not skipped and not any(n.startswith('skeptic-codex') for n in names):
-                raise RuntimeError('Codex Skeptic lane missing. Result excluded.')
+            if variant == 'cross-provider' and not skipped:
+                for phase in ['optimizer', 'skeptic']:
+                    report_path = artifacts / (phase + '-codex.md')
+                    log_path = artifacts / (phase + '-codex.log')
+                    if not report_path.exists() or not report_path.read_text().strip():
+                        raise RuntimeError(f'Codex {phase} lane missing. Result excluded.')
+                    if log_path.exists() and 'sandbox_apply: Operation not permitted' in log_path.read_text():
+                        raise RuntimeError(f'Codex {phase} could not run shell tools under nested sandbox. Result excluded.')
         if not isinstance(data.get('findings'), list) or not isinstance(data.get('optimizer_findings'), list):
             raise RuntimeError('Invalid review schema')
         write_json(status, {'status': 'complete', 'input_hash': case['input_hash']})
@@ -549,7 +562,8 @@ def report(work, destination):
                     failed += status['status'] == 'failed'
                     if status['status'] == 'failed':
                         failures.append(f'- `{benchmark}/{case["id"]}/{variant}`: {status["error"]}')
-                scored += (base / 'score.json').exists()
+                scored += ((base / 'score.json').exists() and (base / 'status.json').exists()
+                           and read_json(base / 'status.json').get('status') == 'complete')
             lines.append(f'| {benchmark} | {len(subset)} | {variant} | {complete} | {failed} | {scored} |')
     lines += ['', '## Quality on paired completed cases', '',
               'Only cases with scores for all three configurations enter this comparison.',
@@ -560,8 +574,11 @@ def report(work, destination):
         return '—' if value is None else f'{100 * value:.1f}%'
     for benchmark in CONFIG['benchmarks']:
         subset = [c for c in cases if c['benchmark'] == benchmark]
-        paired = [c for c in subset if all((work / 'runs' / benchmark / c['id'] / v / 'score.json').exists()
-                                          for v in CONFIG['configurations'])]
+        paired = [c for c in subset if all(
+            (work / 'runs' / benchmark / c['id'] / v / 'score.json').exists()
+            and (work / 'runs' / benchmark / c['id'] / v / 'status.json').exists()
+            and read_json(work / 'runs' / benchmark / c['id'] / v / 'status.json').get('status') == 'complete'
+            for v in CONFIG['configurations'])]
         if not paired:
             lines.append(f'| {benchmark} | 0 | All | — | — | — | — | — |')
             continue
