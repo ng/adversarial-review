@@ -25,3 +25,31 @@ Proposed held-out experiment: require a concrete trigger, source evidence, and
 impact statement for each retained finding, while keeping low-impact cleanup in
 a separate nonblocking section. Evaluate reference recall, independently assessed
 correctness, and report length on held-out PRs before changing the frozen plugin.
+
+## Skeptic reframing can still contain a false detail
+
+Cal.com cross-provider finding F3 describes DB/calendar consistency. Its final
+summary reframes the Optimizer's possible HTTP-500 scenario as a silent calendar
+failure with “no logging.” The core consistency concern is supported: the handler
+persists attendees before sync, and `EventManager.updateCalendarAttendees`
+(`packages/core/EventManager.ts:596`) awaits the update without returning the
+per-calendar results to its caller.
+
+The no-logging detail is contradicted by unchanged source:
+`packages/core/CalendarManager.ts:336` catches provider-update rejection and logs
+it at line 340; another failure log appears at line 351. For that caught rejection
+path, the Skeptic's narrower account of the client failure mode is useful, but
+its logging claim is inaccurate. This check does not prove that every possible
+failure is swallowed: setup occurs outside that promise catch, and the outer
+manager returns `Promise.all(result)` from its try block.
+
+Assessment: **mixed factual support**, not a wholly invented finding. A semantic
+reference match or PLAUSIBLE label can hide an inaccurate supporting clause.
+The current judge sees the diff rather than all unchanged helper implementations;
+this limits factual verification. This selected example is not an estimate of the
+judge's error rate or the reviewers' precision.
+
+PR-quality hypothesis: require the Skeptic to trace both error handling and logging
+before replacing an Optimizer's failure narrative, and preserve uncertainty for
+paths it has not checked. Evaluate factual corrections at the claim level as well
+as counting accepted/rejected findings on a held-out sample.

@@ -287,3 +287,57 @@ review-budget failure; partial output is excluded from quality metrics. Do not
 retry clean budget failures until a favorable outcome appears. This keeps the
 full 1,752-trial scope while distinguishing model-budget outcomes from repairable
 setup errors. Cross-provider and single-pass results remain separately recorded.
+
+## Passing executable example: preserve non-boolean parameters
+
+On `c-crab/ansible__ansible-20646@f695114`, the single-pass baseline reported one
+finding: a change intended to preserve False-valued booleans also filtered out
+ordinary string/dict parameters. The downstream repair changed the condition to
+check for `is not None`; the retained test passed (1/1). This validates that
+specific repair outcome, not the entire module or the reviewer generally.
+
+Potential PR practice: when changing truthiness/filter logic, test a value matrix
+including None, False, True, zero, a nonempty string, and a dict, then trace which
+values reach the downstream API. Evidence: the case's current
+`single/{response,score}.json` and `single/execution/fix.patch`.
+
+Confidence-data limitation: this baseline emitted 0.9 while native reports often
+emit values such as 90. The schema did not declare a common unit. Do not compare
+raw confidence numerically or claim calibrated thresholds from this run without
+an explicit unit audit. Current reference/test metrics do not use confidence.
+
+Timeout-stage evidence for Discourse: the Claude-only run started at 09:55 UTC.
+Its merged Optimizer artifact became available at 10:09:26, the last independent
+Skeptic report at 10:22:50, and the merged Skeptic report at 10:24:22. The 10:25
+cap arrived before summary completion. Individual reviewer artifacts were
+17–33 KB. These timestamps include investigation and writing; they do not prove
+that prose generation was the primary bottleneck.
+
+Held-out hypothesis: a more compact evidence/report format could reserve time
+for synthesis within the same review cap. Measure completion rate and retained
+issue coverage together; do not optimize only for shorter reports. Raw evidence
+remains in the failed case's `.reviews/benchmark/` workspace and transcript.
+
+Discourse cross-provider execution completed at full depth: four Claude subagents
+and both Codex passes produced artifacts; native elapsed time was 1,625 seconds,
+followed by separate normalization. It reported 27 Optimizer candidates and 27
+final findings. The Claude-only run of the same case reached the 1,800-second cap.
+This single outcome does not establish a provider speed advantage; scoring is
+pending and investigation paths vary between independent runs.
+
+A fourth source spot-check in ADJUDICATION.md found mixed factual support in
+Cal.com F3: the data-consistency concern is supported, but the Skeptic summary's
+“no logging” claim is contradicted by CalendarManager's error logs. Issue-level
+reference matching and PLAUSIBLE labels can miss false supporting clauses,
+especially when unchanged helper code is absent from the judge's diff context.
+
+Discourse shared score: cross-provider matched all 7/7 Core reference issues with
+27 final findings (25.9% reference-match precision); single-pass matched 4/7 with
+5 findings (80% reference-match precision). Cross-provider already matched 7/7
+in its Optimizer stage; its final count stayed 27 after one unmatched removal
+and an addition. Unmatched candidates were labeled PLAUSIBLE by the limited-
+context judge, which is not independent proof of correctness. The Claude-only
+budget failure excludes this PR from the three-way successful-case table, while
+these two successful configurations remain directly comparable on this case.
+Evidence: `WORK/runs/martian/ai-code-review-evaluation__discourse-graphite-10/`
+`{single,cross-provider}/score.json`.

@@ -1,20 +1,20 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T10:28:45.127457+00:00
+Generated: 2026-09-09T10:39:28.601988+00:00
 
-**Status: in progress; all planned trials require recorded outcomes and successful reviews require evaluation.**
+**Status: incomplete until every requested review and evaluation has succeeded.**
 
-| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |
+| Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts awaiting retry | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 14 | 0 | 12 |
-| martian | 50 | adversarial | 1 | 7 | 1 |
-| martian | 50 | cross-provider | 1 | 7 | 1 |
-| swe-prbench | 350 | single | 8 | 0 | 6 |
-| swe-prbench | 350 | adversarial | 2 | 0 | 1 |
+| martian | 50 | single | 16 | 0 | 15 |
+| martian | 50 | adversarial | 2 | 6 | 1 |
+| martian | 50 | cross-provider | 2 | 6 | 2 |
+| swe-prbench | 350 | single | 10 | 0 | 9 |
+| swe-prbench | 350 | adversarial | 2 | 0 | 2 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 6 | 0 | 4 |
-| c-crab | 184 | adversarial | 1 | 0 | 1 |
-| c-crab | 184 | cross-provider | 0 | 0 | 0 |
+| c-crab | 184 | single | 11 | 0 | 4 |
+| c-crab | 184 | adversarial | 2 | 0 | 1 |
+| c-crab | 184 | cross-provider | 1 | 0 | 0 |
 
 ## Quality on paired completed cases
 
@@ -44,15 +44,15 @@ subagent usage when reported by the CLI; nested Codex usage is separate. The CLI
 
 | Benchmark | Configuration | Completed reviews | Median seconds | Claude input tokens (incl. cache) | Claude output tokens |
 |---|---|---:|---:|---:|---:|
-| martian | single | 14 | 241.9 | 16533537 | 274113 |
-| martian | adversarial | 1 | 1023.8 | 6559415 | 97360 |
-| martian | cross-provider | 1 | 1024.5 | 7193592 | 104081 |
-| swe-prbench | single | 8 | 215.1 | 13742028 | 148047 |
+| martian | single | 16 | 241.9 | 17844605 | 317753 |
+| martian | adversarial | 2 | 830.0 | 9274218 | 143918 |
+| martian | cross-provider | 2 | 1324.9 | 14999034 | 307391 |
+| swe-prbench | single | 10 | 222.8 | 16741408 | 206469 |
 | swe-prbench | adversarial | 2 | 969.1 | 10414857 | 175420 |
 | swe-prbench | cross-provider | 0 | — | — | — |
-| c-crab | single | 6 | 192.0 | 5537518 | 104766 |
-| c-crab | adversarial | 1 | 889.9 | 5229126 | 84952 |
-| c-crab | cross-provider | 0 | — | — | — |
+| c-crab | single | 11 | 167.9 | 9917838 | 160949 |
+| c-crab | adversarial | 2 | 932.2 | 8305615 | 178729 |
+| c-crab | cross-provider | 1 | 1187.5 | 8143761 | 123573 |
 
 ## Source pins
 
@@ -79,13 +79,9 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 
 - `martian/getsentry__sentry-80168/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bdd229e3f22e307fe40b30ef99e92ff3f6723da4
 
-- `martian/ai-code-review-evaluation__sentry-greptile-2/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 28e3db2520d4ea28c57b08da57b83917ba7b2e15
-
 - `martian/grafana__grafana-80329/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object a886bd3c79a417a70b51509384d1f1ec3e87e96b
 
 - `martian/ai-code-review-evaluation__keycloak-greptile-1/adversarial`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object 30f804af450dec523909a52f2a4b97302d27f5cc
-
-- `martian/ai-code-review-evaluation__discourse-graphite-3/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object e25638dab0d4b98f99c8fe8976ccaae8f4fb9db3
 
 - `martian/getsentry__sentry-77754/cross-provider`: ['git', 'update-ref', 'refs/remotes/origin/main'] failed (128): fatal: update_ref failed for ref 'refs/remotes/origin/main': cannot update ref 'refs/remotes/origin/main': trying to write ref 'refs/remotes/origin/main' with nonexistent object bb5a6837cb5b3d8d3b174e17d42ec14486ef8738
 
