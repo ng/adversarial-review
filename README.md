@@ -44,6 +44,11 @@ codex plugin add adversarial-review@adversarial-review
 
 ## Usage
 
+Claude can invoke the review skill when you ask in natural language, for example,
+"Review this branch" or "Run an adversarial review of PR 405." You can also invoke
+it directly with the commands below. Reviews auto-fix consensus issues by default;
+ask for a review without changes or pass `--no-fix` for report-only mode.
+
 ### Claude Code
 
 ```bash

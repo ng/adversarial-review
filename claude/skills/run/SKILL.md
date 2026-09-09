@@ -1,8 +1,8 @@
 ---
 name: run
-description: Adversarial multi-model code review with progressive cost-gating. Mechanical checks first (free), then Optimizer/Skeptic agents scaled to change complexity. Post-fix verification loop catches regressions.
+description: Run adversarial multi-model code review when asked to review branch changes, review a PR or MR, or perform an adversarial review. Mechanical checks first, then Optimizer/Skeptic agents scaled to change complexity, with post-fix verification.
 argument-hint: "[pr-number] [--no-fix|--fix] [--paths <glob>[,<glob>...]] [--with-codex|--codex-lane|--no-codex]"
-disable-model-invocation: true
+disable-model-invocation: false
 ---
 
 Review all code changes on the current branch that have not been merged yet — or, with `--paths`, only the branch changes under the given paths/globs.
