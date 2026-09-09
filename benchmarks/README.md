@@ -270,3 +270,10 @@ the upstream tag once and saves a shared pin under
 `WORK/metadata/docker-images/`; retain that directory with the run artifacts to
 reproduce the environment. All configurations and retries reuse the shared pin.
 A pin mismatch is an evaluation failure, never an automatic image update.
+
+## Interpreting the current findings
+
+Read [ANALYSIS.md](ANALYSIS.md) for the September 9 preliminary interpretation,
+paired comparisons, evidence limitations, and proposed improvements. Bulk
+launches were paused to conserve the subscription allowance; agree on a bounded
+budget before resuming them. The full benchmark plan remains incomplete.

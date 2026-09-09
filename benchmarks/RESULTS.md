@@ -1,20 +1,20 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T18:06:08.775837+00:00
+Generated: 2026-09-09T19:47:57.566398+00:00
 
 **Status: in progress; all planned trials require recorded outcomes and successful reviews require evaluation.**
 
 | Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |
 |---|---:|---|---:|---:|---:|
-| martian | 50 | single | 18 | 1 | 17 |
+| martian | 50 | single | 18 | 1 | 18 |
 | martian | 50 | adversarial | 2 | 7 | 2 |
 | martian | 50 | cross-provider | 2 | 7 | 2 |
-| swe-prbench | 350 | single | 13 | 1 | 12 |
+| swe-prbench | 350 | single | 13 | 1 | 13 |
 | swe-prbench | 350 | adversarial | 3 | 1 | 3 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 15 | 1 | 7 |
-| c-crab | 184 | adversarial | 2 | 1 | 2 |
-| c-crab | 184 | cross-provider | 1 | 1 | 1 |
+| c-crab | 184 | single | 15 | 1 | 10 |
+| c-crab | 184 | adversarial | 2 | 0 | 2 |
+| c-crab | 184 | cross-provider | 1 | 0 | 1 |
 
 ## Quality on paired completed cases
 
@@ -104,5 +104,3 @@ No missing, failed, or unscored review is treated as a zero-finding successful r
 - `swe-prbench/pipecat__3084/adversarial`: Subscription rejected this request; batch paused without API fallback.
 - `swe-prbench/server__8570/cross-provider`: Subscription rejected this request; batch paused without API fallback.
 - `c-crab/zulip__zulip-25349@67de2a4/single`: Subscription rejected this request; batch paused without API fallback.
-- `c-crab/ansible__ansible-27435@da1a331/adversarial`: Subscription rejected this request; batch paused without API fallback.
-- `c-crab/deepset-ai__haystack-92@accd8b1/cross-provider`: Subscription rejected this request; batch paused without API fallback.
