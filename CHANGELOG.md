@@ -8,6 +8,42 @@
 - **Split runtime skill trees**: Claude Code now loads `claude/skills/` while Codex loads `skills/`, keeping each runtime's orchestration instructions isolated.
 - **Cross-provider workflow docs**: Documented Claude + Codex side-by-side review, Codex install steps, Codex Action usage, and the artifact comparison model for `--compare-claude`.
 
+## [1.8.0](https://github.com/ng/adversarial-review/compare/v1.7.0...v1.8.0) (2026-09-09)
+
+
+### Features
+
+* add --paths review scoping and a cross-provider adapter registry ([#32](https://github.com/ng/adversarial-review/issues/32)) ([78b9093](https://github.com/ng/adversarial-review/commit/78b909359d5344799bcc747134d2e1d79628bcc0))
+* add Codex cross-review support with --with-codex sidecar and flag defaults ([#22](https://github.com/ng/adversarial-review/issues/22)) ([dee9294](https://github.com/ng/adversarial-review/commit/dee929425409079ed1c5ab7081a3a1482b35d2a3))
+* add GitHub Action for CI integration ([#12](https://github.com/ng/adversarial-review/issues/12)) ([0588a75](https://github.com/ng/adversarial-review/commit/0588a7530d84b4f02e480993d903aa33c77ec18c))
+* add specialized lenses, confidence scoring, GitLab support, and opt-in issue filing ([3e7d240](https://github.com/ng/adversarial-review/commit/3e7d2408ecce85a10434d8f457c0cf8d6f100346))
+* adversarial review pipeline with progressive cost-gating and research-informed design ([ac08d11](https://github.com/ng/adversarial-review/commit/ac08d116c3a34e9d6e8330c3cd2ce703b2176649))
+* allow model invocation of adversarial reviews ([b7673cf](https://github.com/ng/adversarial-review/commit/b7673cf66685ea0ec545ff065ef0eb2e6cdae845))
+* auto-move major version tag on release for GHA consumers ([c0af300](https://github.com/ng/adversarial-review/commit/c0af300ab77b927a3f923278ebfd6c6fac4a71da))
+* Claude Code-informed review improvements ([#11](https://github.com/ng/adversarial-review/issues/11)) ([22d1771](https://github.com/ng/adversarial-review/commit/22d1771bdc488a96ef6454df3d0e64e496298127))
+* drive the full Codex lane from the Claude plugin and default Codex on when available ([#27](https://github.com/ng/adversarial-review/issues/27)) ([8ed4583](https://github.com/ng/adversarial-review/commit/8ed4583813a946f30f401804a15a5b670be6e53e))
+* replace version-bump with release-please, extract changelog ([f01a12c](https://github.com/ng/adversarial-review/commit/f01a12c11b41cd2f3425d941e8a46ae2713a23cb))
+* restructure adversarial review to use agent teams ([#4](https://github.com/ng/adversarial-review/issues/4)) ([2db8b68](https://github.com/ng/adversarial-review/commit/2db8b683fa1924f39823264fbbeead35c8ac9eb1))
+* signal quality gates from OpenAI Codex review prompt ([#13](https://github.com/ng/adversarial-review/issues/13)) ([149f452](https://github.com/ng/adversarial-review/commit/149f452654e77b7de9a0f38be040d0f62e05532d))
+
+
+### Bug Fixes
+
+* add skills pointer to plugin.json and validate in CI ([#2](https://github.com/ng/adversarial-review/issues/2)) ([90e2fa4](https://github.com/ng/adversarial-review/commit/90e2fa41a00f4a51f3cc19753f5ad1256fd9e503))
+* auto-fix by default, explicit no-worktree, bump to 1.2.1 ([#7](https://github.com/ng/adversarial-review/issues/7)) ([25c202d](https://github.com/ng/adversarial-review/commit/25c202d5ea04f19aebeabf96ec1097d32f97a869))
+* default to no-fix mode for CI review-only workflow ([d3fa64c](https://github.com/ng/adversarial-review/commit/d3fa64c85e502021c579f0948395c5a146b405d7))
+* defer issue filing prompt to after review completes ([#10](https://github.com/ng/adversarial-review/issues/10)) ([76e4f73](https://github.com/ng/adversarial-review/commit/76e4f734942ae041c301738734203cbee20f580f))
+* drop worktree isolation so review agents can write reports ([#5](https://github.com/ng/adversarial-review/issues/5)) ([af76f71](https://github.com/ng/adversarial-review/commit/af76f71de65408a65aeb80e545ae672ad0c3eaf8))
+* grant release app issue comment permission ([#25](https://github.com/ng/adversarial-review/issues/25)) ([81f1d62](https://github.com/ng/adversarial-review/commit/81f1d62bbbdd1882b7cdbea6b8ed57062cae7ed9))
+* let release-please bump plugin manifests directly ([#17](https://github.com/ng/adversarial-review/issues/17)) ([f30d9b3](https://github.com/ng/adversarial-review/commit/f30d9b3a9cbd100abe4bdbd68d9aef1286dc626c))
+* let release-please read its config file so extra-files version bumps apply ([#29](https://github.com/ng/adversarial-review/issues/29)) ([290d046](https://github.com/ng/adversarial-review/commit/290d0460757fddb49ae63092912d3a9d36073fd9))
+* move review artifacts from .claude/reviews/ to .reviews/ ([#8](https://github.com/ng/adversarial-review/issues/8)) ([8738708](https://github.com/ng/adversarial-review/commit/87387080a982f1cce5cdb3ec876b539767c641a6))
+* remove (worktree) labels from mermaid diagrams ([#6](https://github.com/ng/adversarial-review/issues/6)) ([3347278](https://github.com/ng/adversarial-review/commit/33472783d94b71c56d1e60932c16f06e04888d5f))
+* set git identity before moving the major version tag ([#30](https://github.com/ng/adversarial-review/issues/30)) ([935e084](https://github.com/ng/adversarial-review/commit/935e084dfd004606a9aad77d3299ed1d8805ed38))
+* shorten action description to under 125 chars for Marketplace ([47d6450](https://github.com/ng/adversarial-review/commit/47d6450da29291a6f03b95d2516097bb80460aaa))
+* support GitLab CI_JOB_TOKEN auth in review command ([#19](https://github.com/ng/adversarial-review/issues/19)) ([a2d2a3e](https://github.com/ng/adversarial-review/commit/a2d2a3e004659b8ed1b637c6ebcbb803453b587a))
+* use br tags for mermaid line breaks ([6225b66](https://github.com/ng/adversarial-review/commit/6225b669ce18e3c21bdf356d6becfc1bab05c166))
+
 ## [1.7.0](https://github.com/ng/adversarial-review/compare/v1.6.1...v1.7.0) (2026-09-09)
 
 
