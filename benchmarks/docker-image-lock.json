@@ -21,6 +21,11 @@
       "digest": "ghcr.io/c-crab-benchmark/ccxt__ccxt-14830@sha256:e95ebd76bf15ec9351d9b513b391dfb925fd743e1b811a9b3b127649b51d62c5",
       "id": "sha256:e95ebd76bf15ec9351d9b513b391dfb925fd743e1b811a9b3b127649b51d62c5"
     },
+    "ghcr.io/c-crab-benchmark/ccxt__ccxt-16729:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/ccxt__ccxt-16729:latest",
+      "digest": "ghcr.io/c-crab-benchmark/ccxt__ccxt-16729@sha256:82b7f6f9cacc4d5b80f637a3205e33f25768fe6e263697b936da739b84008e92",
+      "id": "sha256:82b7f6f9cacc4d5b80f637a3205e33f25768fe6e263697b936da739b84008e92"
+    },
     "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92:latest": {
       "tag": "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92:latest",
       "digest": "ghcr.io/c-crab-benchmark/deepset-ai__haystack-92@sha256:70c5ee30ecf6ed60bd4c0b93609759a7e5631c4be2e20772e4d4f7928e45cccc",
@@ -51,10 +56,20 @@
       "digest": "ghcr.io/c-crab-benchmark/posthog__posthog-10293@sha256:288bccd28ae01178bea36cf66bda1e0964afc94da2e6887e932c490a315621ec",
       "id": "sha256:288bccd28ae01178bea36cf66bda1e0964afc94da2e6887e932c490a315621ec"
     },
+    "ghcr.io/c-crab-benchmark/pytorch__vision-4457:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/pytorch__vision-4457:latest",
+      "digest": "ghcr.io/c-crab-benchmark/pytorch__vision-4457@sha256:1dc95fe743fb9abaef89c189501ba651d66c1ede5bfdf9c93865ba16e8ab048f",
+      "id": "sha256:1dc95fe743fb9abaef89c189501ba651d66c1ede5bfdf9c93865ba16e8ab048f"
+    },
     "ghcr.io/c-crab-benchmark/scipy__scipy-20393:latest": {
       "tag": "ghcr.io/c-crab-benchmark/scipy__scipy-20393:latest",
       "digest": "ghcr.io/c-crab-benchmark/scipy__scipy-20393@sha256:71e4116397efa54c5bbbff747444ccfc1241249fb0e606d0c0130b01c1dbea55",
       "id": "sha256:71e4116397efa54c5bbbff747444ccfc1241249fb0e606d0c0130b01c1dbea55"
+    },
+    "ghcr.io/c-crab-benchmark/sympy__sympy-18605:latest": {
+      "tag": "ghcr.io/c-crab-benchmark/sympy__sympy-18605:latest",
+      "digest": "ghcr.io/c-crab-benchmark/sympy__sympy-18605@sha256:c0fcc11629b2e820254a6219638753eda739ca03e27e97c8d10379b42d6757e6",
+      "id": "sha256:c0fcc11629b2e820254a6219638753eda739ca03e27e97c8d10379b42d6757e6"
     },
     "ghcr.io/c-crab-benchmark/xorbitsai__inference-2079:latest": {
       "tag": "ghcr.io/c-crab-benchmark/xorbitsai__inference-2079:latest",

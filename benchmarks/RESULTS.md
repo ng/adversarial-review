@@ -1,6 +1,6 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T11:04:54.293720+00:00
+Generated: 2026-09-09T11:08:16.600535+00:00
 
 **Status: Claude model calls paused by the subscription limit until 2026-09-09T11:50:00+00:00. The full experiment is incomplete.**
 
@@ -12,7 +12,7 @@ Generated: 2026-09-09T11:04:54.293720+00:00
 | swe-prbench | 350 | single | 13 | 1 | 12 |
 | swe-prbench | 350 | adversarial | 3 | 1 | 3 |
 | swe-prbench | 350 | cross-provider | 0 | 1 | 0 |
-| c-crab | 184 | single | 15 | 1 | 5 |
+| c-crab | 184 | single | 15 | 1 | 7 |
 | c-crab | 184 | adversarial | 2 | 1 | 2 |
 | c-crab | 184 | cross-provider | 1 | 1 | 1 |
 

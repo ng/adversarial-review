@@ -385,3 +385,14 @@ change, and success criterion:
 - **Prioritize actionable findings:** distinguish blocking defects from supported
   cleanup suggestions. Measure reviewer acceptance and triage effort; unmatched
   benchmark findings alone do not establish false positives.
+
+The remaining Docker evaluator exited successfully at the subscription pause
+checkpoint. Three further single-pass executable evaluations completed without
+new model calls: ccxt-14582, sympy-18605, and vision-4457 each passed 0/1 retained
+tests. The latter two had empty successful reviews, so no repair-agent request
+was needed. Empty successful reviews remain distinct from interrupted reviews.
+The checkpoint now has 56 completed reviews and 46 scored reviews across the
+three benchmarks; the full plan remains 1,752 trials. Fifteen observed Docker
+image tags have consistent recorded IDs and are now pinned for resumption.
+All remaining unscored c-CRAB successes require a repair-agent call; semantic
+judging and further review generation also require the subscription reset.
