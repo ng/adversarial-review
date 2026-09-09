@@ -1,0 +1,18 @@
+{
+  "martian": {
+    "url": "https://github.com/withmartian/code-review-benchmark.git",
+    "sha": "e616e849755441da38f18bf3adba2c9583b03803"
+  },
+  "swe-prbench": {
+    "url": "https://github.com/FoundryHQ-AI/swe-prbench.git",
+    "sha": "379f0bfd8978a1734cd8399e115d04d4fdceeb89"
+  },
+  "swe-prbench-data": {
+    "url": "https://huggingface.co/datasets/foundry-ai/swe-prbench",
+    "sha": "b87f5797aef3ed2c3153bb1304ea4d801d36ba6e"
+  },
+  "c-crab": {
+    "url": "https://github.com/c-CRAB-Benchmark/dataset.git",
+    "sha": "856dfa3102b8996d168c4f195217b7603e1d1bc6"
+  }
+}

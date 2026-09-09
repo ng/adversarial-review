@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "seed": "adversarial-review-2026-09-09",
+  "review_model": "claude-sonnet-5",
+  "judge_model": "claude-opus-4-6",
+  "timeout_seconds": 1800,
+  "max_budget_usd_per_review": 20,
+  "cross_provider_flag": "--with-codex",
+  "configurations": ["single", "adversarial", "cross-provider"],
+  "benchmarks": ["martian", "swe-prbench", "c-crab"],
+  "sources": {
+    "martian": "https://github.com/withmartian/code-review-benchmark.git",
+    "swe-prbench": "https://github.com/FoundryHQ-AI/swe-prbench.git",
+    "swe-prbench-data": "https://huggingface.co/datasets/foundry-ai/swe-prbench",
+    "c-crab": "https://github.com/c-CRAB-Benchmark/dataset.git"
+  }
+}
