@@ -1,8 +1,8 @@
 # Adversarial reviewer benchmark results
 
-Generated: 2026-09-09T11:08:16.600535+00:00
+Generated: 2026-09-09T18:06:08.775837+00:00
 
-**Status: Claude model calls paused by the subscription limit until 2026-09-09T11:50:00+00:00. The full experiment is incomplete.**
+**Status: in progress; all planned trials require recorded outcomes and successful reviews require evaluation.**
 
 | Benchmark | Planned PRs | Configuration | Completed reviews | Failed attempts (includes budget failures) | Scored |
 |---|---:|---|---:|---:|---:|

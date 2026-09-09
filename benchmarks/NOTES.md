@@ -396,3 +396,11 @@ three benchmarks; the full plan remains 1,752 trials. Fifteen observed Docker
 image tags have consistent recorded IDs and are now pinned for resumption.
 All remaining unscored c-CRAB successes require a repair-agent call; semantic
 judging and further review generation also require the subscription reset.
+
+Resumed on 2026-09-09 at 18:06 UTC after the user reported the subscription reset.
+The previous pause timestamp had expired; both initial resumed native reviews
+emitted primary rate-limit status `allowed` and assistant/tool events. Restarted
+the full-scope runner with two workers, semantic scoring with two workers, and
+c-CRAB evaluation with one worker. Existing successful reviews and terminal
+budget failures are preserved. The local emptied RESULTS.md was copied to
+`WORK/operator-copies/` before regenerating the report from saved artifacts.
