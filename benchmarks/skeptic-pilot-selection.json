@@ -1,0 +1,31 @@
+{
+  "status": "proposed; not authorized or run",
+  "selection_rule": "First SHA256(seed:benchmark:id) per benchmark among cases without any existing run directory; seed=skeptic-pilot-v2-2026-09-10",
+  "eligibility_limit": "Absence of a run directory does not prove no prior source exposure; audit required before execution, otherwise abort without replacement.",
+  "cases": [
+    {
+      "benchmark": "martian",
+      "id": "keycloak__keycloak-32918",
+      "repo": "keycloak/keycloak",
+      "base": "272cfc68dcc88615396ae62ed1571918e9c58ad3",
+      "head": "e944e2acf1e64421860a8e827f93ad06c169621b",
+      "input_hash": "f76ab8e2680aa52a64000b209a4f2f6f13704f9c5b4d47aa5ccf2c388d092266"
+    },
+    {
+      "benchmark": "swe-prbench",
+      "id": "stylelint__9062",
+      "repo": "stylelint/stylelint",
+      "base": "f3ba4abcabdb3db79241b94b559a47c0aaa8f19d",
+      "head": "102e51810eb8a1700d950f4d53fbd2237be2d54c",
+      "input_hash": "71f35972da9087623eb090b4faa7f142be776eab970f3037c8b3b36b0c81e126"
+    },
+    {
+      "benchmark": "c-crab",
+      "id": "python__mypy-6781@3a824fb",
+      "repo": "python/mypy",
+      "base": "2e098a2ee1fec57e46b21f49b673cdfe01f8dc21",
+      "head": "3a824fb6e4136a380c382b5c8027ee2e60f54564",
+      "input_hash": "35b45c981963c8f9f9e1b0398a3e8d06468d4dd0270d792ec85f47a75a297e07"
+    }
+  ]
+}

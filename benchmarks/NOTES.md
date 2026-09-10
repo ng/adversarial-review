@@ -429,3 +429,12 @@ spot-checks” also conflates counts: seven scored native reviews span six PRs,
 while the documented source checks cover seven selected findings on two PRs.
 The proposal remains unchanged pending incorporation of the reviewed changes;
 bulk benchmark launches remain paused.
+
+At the user's request, two more bounded Claude document reviews worked through
+the proposal's design gaps. Dispositions, source-aware adjudication, loss
+accounting, fixed stopping rules, and an explicitly separate packet-only pilot
+are now specified. Claude's final verdict was design-ready subject to its last
+prompt-fidelity check, now incorporated, and execution prerequisites. No pilot
+was run. See [PROPOSAL-DISCUSSION.md](PROPOSAL-DISCUSSION.md) for decisions,
+remaining work, and links to both unedited review outputs. The proposed pilot
+does not replace or complete the paused 1,752-trial experiment.
