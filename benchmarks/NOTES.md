@@ -404,3 +404,28 @@ the full-scope runner with two workers, semantic scoring with two workers, and
 c-CRAB evaluation with one worker. Existing successful reviews and terminal
 budget failures are preserved. The local emptied RESULTS.md was copied to
 `WORK/operator-copies/` before regenerating the report from saved artifacts.
+
+## September 10: Claude review of the proposal
+
+At the user's explicit request, one tool-free Claude Sonnet 5 CLI invocation
+reviewed SKEPTIC-PROPOSAL.md alongside ANALYSIS.md and ADJUDICATION.md. No subagents
+or benchmark trials were started. The call used subscription-only authentication,
+a 300-second timeout, and a $2 nominal CLI computation ceiling (not API billing).
+The full output is preserved in [CLAUDE-PROPOSAL-REVIEW.md](CLAUDE-PROPOSAL-REVIEW.md).
+
+Claude judged the proposal not yet ready for a pilot, prioritizing disposition
+semantics, source-aware adjudication of both retained and rejected candidates,
+and enforceable call accounting. It also requested an explicit pair count and
+stopping rules. These are review recommendations, not empirical validation of
+the proposed Skeptic change.
+
+Assistant assessment: the operational gaps are actionable. Two qualifications
+matter before applying the recommendations. First, a one-pair usage estimate
+cannot enforce a hard quota ceiling; a so-called dry run that makes model calls
+also consumes allowance. Second, the suggestion that the held-out pool may be
+exhausted is unsupported by the supplied evidence: the plan contains 584 PRs,
+and eligibility needs an explicit exposure audit. Claude's reference to “n=6
+spot-checks” also conflates counts: seven scored native reviews span six PRs,
+while the documented source checks cover seven selected findings on two PRs.
+The proposal remains unchanged pending incorporation of the reviewed changes;
+bulk benchmark launches remain paused.
