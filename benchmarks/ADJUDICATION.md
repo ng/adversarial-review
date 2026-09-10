@@ -53,3 +53,27 @@ PR-quality hypothesis: require the Skeptic to trace both error handling and logg
 before replacing an Optimizer's failure narrative, and preserve uncertainty for
 paths it has not checked. Evaluate factual corrections at the claim level as well
 as counting accepted/rejected findings on a held-out sample.
+
+## September 10: Sentry #77754, three additional source checks
+
+Selection rule: take the first three final finding IDs in lexical order (F1–F3)
+from the completed Claude adversarial review of `getsentry__sentry-77754`, before
+inspecting this case's source for this follow-up. This is a convenience sample
+from one additional PR, not random or blinded. Checks are static; no application
+runtime or deployment was exercised.
+
+Frozen head: `9501091c52ae94e8d916f79b35d21975b3f9cadb`.
+Source paths below are relative to `WORK/snapshots/martian/getsentry__sentry-77754`.
+
+| Finding | Evidence | Assessment and proposed disposition |
+|---|---|---|
+| F1: shared import-time `queued` timestamp | `src/sentry/integrations/services/assignment_source.py:18` calls `timezone.now()` in the dataclass body; lines 21–25 construct instances without overriding it. `to_dict` uses `asdict` at line 28, and `src/sentry/integrations/utils/sync.py:141` puts that dictionary into task kwargs. No timestamp reader was found by a search for `.queued`, queued subscripts, or `get("queued")` in `src/`; this is not proof against dynamic access. | Core defect supported: the default is evaluated at class definition. Current user-visible impact is unproven, consistent with the finding's future-reader qualification. Its supporting claim that neighboring `GroupAssignee.date_added` uses `default_factory` is imprecise: `src/sentry/models/groupassignee.py:263` uses Django's `DateTimeField(default=timezone.now)`, a callable default through a different API. Retain a narrow low-impact finding, with the regression test attached; correct the supporting example. |
+| F2: `test_to_dict` cannot catch the timestamp default defect | `tests/sentry/integrations/services/test_assignment_source.py:36` checks only that serialized `queued` is not None. That assertion cannot distinguish a shared timestamp from one generated for each instance. | The coverage gap is supported. Calling this the regression the test “nominally covers” infers test intent: its name is about serialization. Fold the test recommendation into F1, rather than treating it as another independent product defect. Use a controlled clock for a regression test; two uncontrolled real-time calls are weaker evidence. |
+| F3: malformed assignment metadata silently removes the source guard | `assignment_source.py:31–35` catches ValueError/TypeError and returns None without local logging. `src/sentry/integrations/tasks/sync_assignee_outbound.py:53–60` passes the parsed value to `should_sync`. `src/sentry/integrations/mixins/issues.py:382–394` skips the same-integration check when the source is None, then returns the configured sync setting. | The conditional fail-open path is supported, but a real incompatible producer/schema transition was not established. The same-integration check is bypassed only under the described malformed-data condition, and synchronization still depends on configuration and earlier guards. “Zero observability” is broader than the verified absence of logging in the parser. Record a conditional hardening suggestion or seek producer evidence before asserting a demonstrated production sync loop. Logging improves diagnosis; it does not itself restore cycle prevention. |
+
+These checks suggest two concrete quality controls: merge a defect and its
+associated missing regression test when they share one fix, and distinguish a
+verified conditional mechanism from evidence that its trigger occurs in the
+supported system. They also reinforce checking supporting examples: a correct
+core defect can still contain an inaccurate API detail. These dispositions are
+proposed editorial judgments, not replacement benchmark labels.

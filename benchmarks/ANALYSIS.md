@@ -125,3 +125,12 @@ invalid setup attempts were excluded; this analysis uses current validated
 artifacts. The latest shared Cal.com judge gives single-pass 2/6 coverage; an
 earlier two-way judge gave 3/6, illustrating judgment variability rather than a
 change to that review's output.
+
+## September 10 follow-up
+
+Three additional static checks on Sentry #77754 support consolidating a defect
+and its missing regression test, checking supporting API details, and stating
+conditional failure paths without claiming an unverified production trigger.
+See the appended [source checks](ADJUDICATION.md) and the concrete
+[Skeptic proposal](SKEPTIC-PROPOSAL.md). The proposal has not been applied or
+benchmarked; these observations do not change the existing benchmark scores.
