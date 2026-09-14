@@ -1,5 +1,20 @@
 # Run the adversarial-review experiment
 
+## Current focus: evaluate the prompt-based plugin
+
+Use the existing native-plugin runner (`run.py`) and suite scoring (`score.py`,
+`ccrab.py`). Do not add custom source tools, MCP servers, execution runtimes, or
+replacement review workflows. The experimental `pilot/` framework has been
+retired; see [PROMPT-EVALUATION.md](PROMPT-EVALUATION.md) for the cleanup record
+and the next comparison. Historical results below are not new measurements.
+
+**Current environment limitation:** `run.py` requires macOS `sandbox-exec` for
+review isolation; this workspace is Linux. The commands below are not currently
+an end-to-end runnable recipe here. Do not silently remove isolation to make them
+pass. Resolve this using an existing supported execution environment, not another
+custom reviewer harness. The original `/tmp/adversarial-review-benchmarks` results
+workspace is unavailable; use a fresh durable root rather than claiming a resume.
+
 Give Claude this document and say:
 
 > Follow benchmarks/README.md. Resume the experiment, run every benchmark and all
